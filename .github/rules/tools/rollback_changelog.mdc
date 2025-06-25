@@ -1,0 +1,10 @@
+---
+description: rollback_changelog: When rollingback a changelog
+globs: 
+alwaysApply: false
+---
+# rollback_changelog
+When instructed to rollback a changelog. Always start by looking at the `.ai/state.md` file and finding the `current_migration` in the frontmatter.
+Analyze the contents of the changelog, then plan out an approach for rolling-back the changes. Be pragmatic with the approach.
+After that, update the changelog to uncheck the changes that were un-applied
+Then finally, update `.ai/state.md` to reflect the recent rollback.

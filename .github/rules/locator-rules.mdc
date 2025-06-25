@@ -1,0 +1,94 @@
+# 🔧 Element Locator Strategy & Best Practices
+
+## ⚠️ Important: Framework Compatibility
+
+**Modern automation frameworks (Playwright, Selenium, Cypress) do NOT support jQuery CSS extensions.**
+
+❌ **Forbidden jQuery Syntax:**
+- `:contains("text")` - Use XPath instead: `//element[text()="text"]`
+- `:visible` - Use framework-specific visibility checks
+- `:hidden` - Use framework-specific visibility checks
+- `:eq(n)` - Use standard CSS `:nth-child(n+1)` or XPath `[position()=n]`
+
+✅ **Use Instead:**
+- **For text content:** XPath expressions like `//button[text()="Login"]`
+- **For visibility:** Framework-specific methods (e.g., Playwright's `isVisible()`)
+- **For positioning:** Standard CSS pseudo-selectors or XPath positioning
+
+## Locator Priority Hierarchy
+
+### **CSS Selectors (Primary - High Priority)**
+
+**For Buttons & Interactive Elements:**
+1. **ID Attribute** - `#login-btn`, `#submit-button`
+2. **Name Attribute** - `[name="submit"]`, `[name="login-btn"]`
+3. **Unique Class** - `.login-form-submit`, `.primary-button`
+4. **Attribute Combinations** - `button[type="submit"][class="btn-primary"]`
+5. **Text Content (XPath only)** - Use XPath for text-based selection: `//button[text()="Login"]`
+
+**For Input Fields & Form Elements:**
+1. **Placeholder Text** - `[placeholder="Enter username"]`, `[placeholder="Your email"]`
+2. **ID Attribute** - `#username`, `#email-field`
+3. **Name Attribute** - `[name="username"]`, `[name="password"]`
+4. **Unique Class** - `.username-input`, `.email-field`
+5. **Attribute Combinations** - `input[type="email"][required]`, `input[type="text"][maxlength="50"]`
+
+### **XPath Expressions (Fallback - Lower Priority)**
+1. **Text-based XPath** - `//button[text()="Login"]`, `//a[contains(text(),"Sign Up")]`
+2. **Attribute-based XPath** - `//input[@name="username"]`, `//button[@data-testid="submit"]`
+3. **Relative XPath** - `//form[@class="login-form"]//button[@type="submit"]`
+
+## Element Type Identification Rules
+
+### **Input Fields & Form Elements:**
+**Priority Order:**
+1. `[placeholder="placeholder-text"]` (CSS)
+2. `#field-id` (CSS)
+3. `[name="field-name"]` (CSS)
+4. `.unique-class-name` (CSS)
+5. `input[type="text"][required]` (CSS - Attribute combinations)
+6. `//input[@placeholder="placeholder-text"]` (XPath)
+
+### **Buttons & Interactive Elements:**
+**Priority Order:**
+1. `#button-id` (CSS)
+2. `[name="button-name"]` (CSS)
+3. `.unique-button-class` (CSS)
+4. `button[type="submit"][class="btn-primary"]` (CSS - Attribute combinations)
+5. `button[aria-label="Button Text"]` (CSS - Accessible attributes)
+6. `//button[text()="Button Text"]` (XPath - Text-based selection)
+
+### **Links & Navigation:**
+**Priority Order:**
+1. `#link-id` (CSS)
+2. `[href="/specific-path"]` (CSS)
+3. `.unique-link-class` (CSS)
+4. `a[data-testid="link-name"]` (CSS - Attribute combinations)
+5. `a[aria-label="Link Text"]` (CSS - Accessible attributes)
+6. `//a[contains(text(),"Link Text")]` (XPath - Text-based selection)
+
+### **Dropdown Fields & Select Elements:**
+**Priority Order:**
+1. `#select-id` (CSS)
+2. `[name="select-name"]` (CSS)
+3. `select[data-testid="dropdown-name"]` (CSS)
+4. `.unique-select-class` (CSS)
+5. `select[multiple]` (CSS - Attribute combinations)
+6. `//select[@name="select-name"]` (XPath)
+
+## Forbidden Practices
+- ❌ Absolute XPath paths: `/html/body/div[1]/div[2]/button`
+- ❌ Position-dependent CSS: `div:nth-child(3) > button:first-child`
+- ❌ Fragile class combinations: `.container.row.col-md-6.form-group`
+- ❌ Complex nested selectors: `div > div > div > form > div > input`
+- ❌ Index-based selections without context: `:nth-child(1)`, `:first-child` (unless unique)
+- ❌ jQuery extensions in CSS: `:contains("text")`, `:visible`, `:hidden` (not supported in modern frameworks)
+
+## Best Practices for Reliable Locators
+- ✅ Use semantic attributes (data-testid, id, name)
+- ✅ Prefer CSS selectors over XPath for better performance
+- ✅ Create unique and descriptive locator names
+- ✅ Use text content for buttons and links when stable (XPath only - avoid jQuery syntax)
+- ✅ Combine attributes for better uniqueness
+- ✅ Test locators for uniqueness (should match only one element)
+- ✅ Use XPath for text-based selections instead of CSS :contains() pseudo-selectors

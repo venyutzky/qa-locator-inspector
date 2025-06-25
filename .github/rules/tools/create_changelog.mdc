@@ -1,0 +1,42 @@
+---
+description: create_changelog: When creating changelogs
+globs: 
+alwaysApply: false
+---
+# create_changelog
+Create a changelog entry.
+
+**Location:** `.ai/changelogs/`
+**Filename Structure:** `<YYYYMMDDHHMMSS>_<title_of_changelog>.md`
+**Format:** Markdown
+
+## Defining the Filename
+- Use the command `date +"%Y%m%d%H%M%S"` to identify the current timestamp (in the filename).
+- Summarize the gist of instructions and use that as the title. Maximum of 8 words.
+
+## Contents
+- Plan your task first then break the plan down into concrete steps that a junior QA engineer can understand.
+- Frontmatter defines the title, description, and status of the project.
+- Define steps as a checklist. Include necessary context as sublist of that checklist.
+- Provide a section for any additional instructions relevant to the changelog. Only add it when absolutely necessary
+
+## Example
+
+```markdown
+---
+title: (Title of changelog)
+description: (A high-level description of the change being made)
+status: (unapplied|applied)
+---
+
+## Steps
+- [ ] ...
+- [ ] ...
+    - ...
+    - ...
+- [ ] ...
+- [ ] ...
+
+## Additional Instructions
+...
+```

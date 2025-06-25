@@ -1,0 +1,49 @@
+---
+description: update_state: Use this instructions when updating .ai/state.md
+globs: 
+alwaysApply: false
+---
+# update_state
+The state file is the declaration of the state of the whole workspace. As changelogs are applied, the state of the workspace is updated and the final state is defined here.
+
+**Location:** `.ai/state.md`
+
+## Contents
+- The 
+
+## Example
+
+```markdown
+---
+previous_migration: (...|nil)
+current_migration: <YYYYMMDDHHMMSS>_<title_of_the_change>.md
+---
+
+## project-(app|backend|web|...)
+- Location: ...
+- Framework: ...
+- Environment: ...
+- Dependency Management: ...
+...then other high-level key properties
+
+### File Structure
+(file tree with description of each file)
+
+### Dependencies
+(list of dependencies and their purpose)
+
+### Commands
+(list of commands used on this project and what they do)
+
+### Endpoints
+(list of endpoints their expected behaviors, and implementation file paths)
+
+### Models
+(list of [data] models, their descriptions, and the file they're located)
+
+### Pages [for web-based apps]
+(list of pages, their urls, content they present, and implementation file paths)
+
+### Screens [for mobile apps]
+(list of screens, the content they present, actions possible, and implementation file paths)
+```

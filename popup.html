@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {
+            width: 350px;
+            min-height: 400px;
+            margin: 0;
+            padding: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f7fafc;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+        
+        .subtitle {
+            font-size: 12px;
+            color: #718096;
+        }
+        
+        .toggle-section {
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .toggle-button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .toggle-button.enabled {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .toggle-button.disabled {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+        
+        .toggle-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .status {
+            margin-top: 8px;
+            font-size: 12px;
+            text-align: center;
+        }
+        
+        .status.enabled {
+            color: #38a169;
+        }
+        
+        .status.disabled {
+            color: #718096;
+        }
+        
+        .features {
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .features h3 {
+            margin: 0 0 12px 0;
+            font-size: 14px;
+            color: #2d3748;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: #4a5568;
+        }
+        
+        .feature-icon {
+            margin-right: 8px;
+            font-size: 14px;
+        }
+        
+        .history-section {
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .history-section h3 {
+            margin: 0 0 12px 0;
+            font-size: 14px;
+            color: #2d3748;
+        }
+        
+        .history-item {
+            padding: 8px;
+            background: #f7fafc;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-size: 11px;
+            font-family: 'SF Mono', 'Monaco', monospace;
+        }
+        
+        .history-locators {
+            margin-bottom: 4px;
+        }
+        
+        .history-css {
+            color: #38a169;
+            word-break: break-all;
+            margin-bottom: 2px;
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 2px;
+            transition: background-color 0.2s;
+        }
+        
+        .history-css:hover {
+            background: #e6fffa;
+        }
+        
+        .history-xpath {
+            color: #9f7aea;
+            word-break: break-all;
+            margin-bottom: 2px;
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 2px;
+            transition: background-color 0.2s;
+        }
+        
+        .history-xpath:hover {
+            background: #f7faff;
+        }
+        
+        .locator-type {
+            font-weight: bold;
+            font-size: 10px;
+        }
+        
+        .history-meta {
+            color: #718096;
+            font-size: 10px;
+        }
+        
+        .no-history {
+            font-size: 12px;
+            color: #a0aec0;
+            text-align: center;
+            font-style: italic;
+        }
+        
+        .footer {
+            margin-top: 16px;
+            text-align: center;
+            font-size: 10px;
+            color: #a0aec0;
+        }
+        
+        .export-button {
+            width: 100%;
+            padding: 8px;
+            margin-top: 8px;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            background: white;
+            color: #4a5568;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .export-button:hover {
+            background: #f7fafc;
+            border-color: #cbd5e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">🎯 Find My Locator</div>
+        <div class="subtitle">Locator Inspector</div>
+    </div>
+    
+    <div class="toggle-section">
+        <button id="toggleButton" class="toggle-button disabled">
+            Enable Inspector
+        </button>
+        <div id="status" class="status disabled">
+            Click to start inspecting elements
+        </div>
+    </div>
+    
+    <div class="features">
+        <h3>How to Use</h3>
+        <div class="feature-item">
+            <span class="feature-icon">🖱️</span>
+            Hover over elements to see locators
+        </div>
+        <div class="feature-item">
+            <span class="feature-icon">📋</span>
+            Click elements to copy CSS selector
+        </div>
+        <div class="feature-item">
+            <span class="feature-icon">🎨</span>
+            Elements are highlighted with red outline
+        </div>
+        <div class="feature-item">
+            <span class="feature-icon">⚡</span>
+            Compatible with Playwright, Selenium, Cypress
+        </div>
+    </div>
+    
+    <div class="history-section">
+        <h3>Recent Locators</h3>
+        <div id="historyContainer">
+            <div class="no-history">No locators copied yet</div>
+        </div>
+        <button id="exportButton" class="export-button" style="display: none;">
+            📤 Export History
+        </button>
+    </div>
+    
+    <div class="footer">
+        Made with ❤️ by Venyutzky
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

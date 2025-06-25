@@ -1,0 +1,22 @@
+/* QA Locator Inspector - Content Styles */
+
+#qa-locator-tooltip {
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace !important;
+    line-height: 1.4 !important;
+    letter-spacing: 0.025em !important;
+}
+
+#qa-locator-tooltip * {
+    box-sizing: border-box !important;
+}
+
+/* Ensure tooltip is always on top */
+#qa-locator-tooltip {
+    z-index: 2147483647 !important;
+}
+
+/* Override any website styles that might interfere */
+[data-qa-highlighted] {
+    outline: 2px solid #ff6b6b !important;
+    outline-offset: 1px !important;
+}
