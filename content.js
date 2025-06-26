@@ -241,6 +241,23 @@ Quick Copy:
             this.addToHistory(locators);
             this.showCopyNotification('XPath');
         }
+        // Normal clicks proceed without interference
+    }
+
+    showLocatorOptions(locators) {
+        console.log(`
+🎯 Element Locators:
+CSS: ${locators.css}
+XPath: ${locators.xpath}
+
+Quick Copy:
+- Ctrl+Click: Copy CSS
+- Alt+Click: Copy XPath
+- Right-Click: Copy XPath
+        `);
+        
+        // Show notification about console output
+        this.showCopyNotification('Locators logged to console');
     }
 
     handleKeyDown(e) {
