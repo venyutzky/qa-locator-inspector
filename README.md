@@ -15,7 +15,13 @@ A professional Chrome extension designed for QA engineers and automation testers
 - **Click to Copy**: Click any element to copy its CSS selector to clipboard
 - **Real-time Tooltips**: See both CSS and XPath locators instantly
 
-### 📋 Locator Management
+### � Advanced DOM Support
+- **iframe Elements**: Automatically detects and generates locators for elements inside iframes
+- **Shadow DOM**: Supports web components and shadow DOM element inspection
+- **Cross-frame Locators**: Generates frame-switching code for Playwright and Selenium
+- **Context Indicators**: Visual indicators show iframe/shadow DOM context in tooltips
+
+### �📋 Locator Management
 - **History Tracking**: Keeps track of recently copied locators
 - **Export Functionality**: Export locator history as JSON for documentation
 - **Easy Toggle**: Enable/disable inspector with one click
@@ -44,6 +50,50 @@ A professional Chrome extension designed for QA engineers and automation testers
    - Open the extension popup to see recently copied locators
    - Click any history item to copy it again
    - Export history for documentation
+
+4. **Advanced DOM Scenarios**
+   - **iframes**: Automatically detects elements inside iframes and generates frame-switching locators
+   - **Shadow DOM**: Works with web components and shadow DOM elements
+   - **Context Display**: Tooltips show iframe/shadow DOM context information
+
+## Advanced Features
+
+### iframe Support
+- Automatically injects inspector into accessible iframes
+- Generates frame-switching locators for automation frameworks
+- Visual indicators show which iframe contains the element
+- Supports nested iframes
+
+**Example iframe locators:**
+```css
+/* CSS with iframe context */
+iframe[name="checkout"] >>> input[placeholder="Email"]
+
+/* Playwright frame locator */
+page.frame('checkout').locator('input[placeholder="Email"]')
+
+/* Selenium frame switching */
+driver.switch_to.frame('checkout'); 
+driver.find_element(By.CSS_SELECTOR, 'input[placeholder="Email"]')
+```
+
+### Shadow DOM Support
+- Traverses shadow roots to find encapsulated elements
+- Generates shadow-piercing selectors
+- Works with both open and closed shadow roots
+- Supports web components and custom elements
+
+**Example shadow DOM locators:**
+```css
+/* CSS shadow piercing */
+custom-widget::shadow button[data-testid="submit"]
+
+/* Playwright shadow piercing */
+page.locator('custom-widget').locator('button[data-testid="submit"]')
+
+/* Cypress shadow DOM */
+cy.get('custom-widget').shadow().find('button[data-testid="submit"]')
+```
 
 ## Locator Priority
 

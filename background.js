@@ -24,3 +24,24 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         // Could be used to reinject content script if needed
     }
 });
+
+// Handle iframe communication
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'iframe_locator') {
+        // Handle cross-frame locator communication
+        chrome.tabs.sendMessage(sender.tab.id, {
+            action: 'locator_from_iframe',
+            locator: request.locator,
+            frameInfo: request.frameInfo
+        });
+    }
+    
+    if (request.action === 'shadow_dom_locator') {
+        // Handle shadow DOM locator communication
+        chrome.tabs.sendMessage(sender.tab.id, {
+            action: 'locator_from_shadow',
+            locator: request.locator,
+            shadowInfo: request.shadowInfo
+        });
+    }
+});

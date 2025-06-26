@@ -6,6 +6,8 @@ class LocatorInspector {
         this.tooltip = null;
         this.locatorHistory = [];
         this.modifierPressed = false;
+        this.frameContext = null; // Track current frame context
+        this.shadowContext = null; // Track current shadow DOM context
         this.init();
     }
 
@@ -13,6 +15,26 @@ class LocatorInspector {
         this.createTooltip();
         this.bindEvents();
         this.loadSettings();
+        this.checkLocalFileContext();
+        this.injectIntoIframes();
+        this.setupShadowDOMObserver();
+    }
+
+    checkLocalFileContext() {
+        if (window.location.protocol === 'file:') {
+            console.warn(`
+🔧 QA Locator Inspector - Local File Detection
+For iframe testing with local files, consider using a local development server:
+- Python: python3 -m http.server 8000
+- Node.js: npx serve .
+- VS Code: Live Server extension
+Then access via http://localhost:8000/test-standard-iframe.html
+
+iframe content may not be accessible due to browser security restrictions with file:// protocol.
+            `);
+            return true;
+        }
+        return false;
     }
 
     createTooltip() {
@@ -52,7 +74,38 @@ class LocatorInspector {
                 this.toggle();
                 sendResponse({enabled: this.isEnabled});
             } else if (request.action === 'getStatus') {
-                sendResponse({enabled: this.isEnabled});
+                sendResponse({
+                    enabled: this.isEnabled,
+                    iframeCount: this.iframeInspectors ? this.iframeInspectors.length : 0,
+                    inaccessibleCount: this.inaccessibleIframes ? this.inaccessibleIframes.length : 0,
+                    localFileWarning: window.location.protocol === 'file:'
+                });
+            } else if (request.action === 'getIframeStatus') {
+                // Debug command to check iframe injection status
+                const iframes = document.querySelectorAll('iframe');
+                const status = {
+                    totalIframes: iframes.length,
+                    injectedIframes: this.iframeInspectors ? this.iframeInspectors.length : 0,
+                    inaccessibleIframes: this.inaccessibleIframes ? this.inaccessibleIframes.length : 0,
+                    localFileContext: window.location.protocol === 'file:',
+                    protocol: window.location.protocol,
+                    iframeDetails: [],
+                    inaccessibleDetails: this.inaccessibleIframes || []
+                };
+                
+                iframes.forEach((iframe, index) => {
+                    const accessResult = this.canAccessIframe(iframe);
+                    status.iframeDetails.push({
+                        name: iframe.name || iframe.id || `iframe-${index}`,
+                        src: iframe.src || 'srcdoc',
+                        accessible: accessResult.accessible,
+                        reason: accessResult.reason || 'accessible',
+                        readyState: accessResult.readyState || 'unknown'
+                    });
+                });
+                
+                console.log('iframe injection status:', status);
+                sendResponse(status);
             }
         });
     }
@@ -75,6 +128,9 @@ class LocatorInspector {
     handleMouseOver(e) {
         if (!this.isEnabled) return;
         
+        // Reset contexts when hovering over regular DOM elements
+        this.resetContexts();
+        
         this.hoveredElement = e.target;
         this.addHighlight(e.target);
         this.showTooltip(e);
@@ -92,6 +148,9 @@ class LocatorInspector {
         
         e.preventDefault();
         e.stopPropagation();
+        
+        // Reset contexts for regular DOM elements
+        this.resetContexts();
         
         const locators = this.generateLocators(e.target);
         const elementType = this.getElementType(e.target);
@@ -180,13 +239,36 @@ class LocatorInspector {
     }
 
     showTooltip(e) {
-        const locators = this.generateLocators(e.target);
-        const cssUnique = this.isUniqueSelector(locators.css);
+        const locators = this.frameContext ? 
+            this.generateIframeLocators(e.target, this.frameContext) :
+            this.shadowContext ? 
+                this.generateShadowDOMLocators(e.target, this.shadowContext) :
+                this.generateLocators(e.target);
+                
+        // For iframe locators, we need to check uniqueness differently
+        let cssUnique = false;
+        if (this.frameContext) {
+            // For iframe elements, check uniqueness within the iframe document
+            try {
+                const iframeDoc = document.querySelector(`iframe[name="${this.frameContext.name}"]`).contentDocument;
+                const baseSelector = this.generateLocators(e.target).css;
+                cssUnique = iframeDoc.querySelectorAll(baseSelector).length === 1;
+            } catch (error) {
+                console.log('Error checking iframe CSS uniqueness:', error);
+                cssUnique = false;
+            }
+        } else {
+            cssUnique = this.isUniqueSelector(locators.css);
+        }
+        
         const elementType = this.getElementType(e.target);
         
         // Get locator quality info
         const cssQuality = this.getLocatorQuality(locators.css, elementType);
         const xpathQuality = this.getXPathQuality(locators.xpath);
+        
+        // Get context information
+        const contextInfo = this.getContextInfo();
         
         // Special handling for text elements
         let textInfo = '';
@@ -207,10 +289,13 @@ class LocatorInspector {
             `;
         }
         
+        const matchCount = this.frameContext ? 'N/A (iframe)' : document.querySelectorAll(locators.css).length;
+        
         this.tooltip.innerHTML = `
             <div style="margin-bottom: 8px; font-weight: bold; color: #ffd93d;">
                 ${elementType === 'text' ? '📝' : '🎯'} ${elementType === 'text' ? 'Text Assertion' : 'Element Locators'} (${elementType})
             </div>
+            ${contextInfo}
             ${textInfo}
             <div style="margin-bottom: 6px;">
                 <span style="color: #68d391; font-weight: bold;">CSS:</span>
@@ -238,7 +323,7 @@ class LocatorInspector {
                 🎯 CSS Mode (Click)
             </div>
             <div style="margin-top: 4px; font-size: 10px; color: #a0aec0;">
-                Click: CSS • Ctrl/Alt+Click: XPath • Right-click: XPath • Matches: ${document.querySelectorAll(locators.css).length} elements
+                Click: CSS • Ctrl/Alt+Click: XPath • Right-click: XPath • Matches: ${matchCount} elements
             </div>
         `;
         
@@ -1235,6 +1320,843 @@ class LocatorInspector {
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/\s+/g, ' '); // Replace multiple whitespace with single space
+    }
+
+    // ================== IFRAME SUPPORT ==================
+
+    injectIntoIframes() {
+        // Find all iframes and inject content script
+        const iframes = document.querySelectorAll('iframe');
+        console.log(`Found ${iframes.length} iframes to inject into`);
+        
+        iframes.forEach((iframe, index) => {
+            this.handleIframeInjection(iframe, index);
+        });
+
+        // Watch for dynamically added iframes
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        if (node.tagName === 'IFRAME') {
+                            this.handleIframeInjection(node, Date.now());
+                        } else if (node.querySelectorAll) {
+                            const newIframes = node.querySelectorAll('iframe');
+                            newIframes.forEach((iframe, index) => {
+                                this.handleIframeInjection(iframe, Date.now() + index);
+                            });
+                        }
+                    }
+                });
+            });
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+
+    handleIframeInjection(iframe, frameId) {
+        console.log(`Attempting injection for iframe:`, iframe.name || iframe.id || 'unnamed', iframe);
+        
+        // Set up load event listener first for both srcdoc and src iframes
+        const handleLoad = () => {
+            console.log(`iframe load event fired for ${iframe.srcdoc ? 'srcdoc' : 'src'} iframe`);
+            setTimeout(() => {
+                this.injectIntoIframe(iframe, frameId);
+            }, 50); // Small delay to ensure content is ready
+        };
+        
+        iframe.addEventListener('load', handleLoad, { once: true });
+        
+        // For srcdoc iframes, also try immediate injection with delay
+        if (iframe.srcdoc) {
+            console.log(`Detected srcdoc iframe, setting up immediate and delayed injection`);
+            setTimeout(() => {
+                this.injectIntoIframe(iframe, frameId);
+            }, 100);
+        } else if (iframe.src) {
+            // For src iframes, try immediate injection in case already loaded
+            console.log(`Detected src iframe: ${iframe.src}, trying immediate injection`);
+            this.injectIntoIframe(iframe, frameId);
+        }
+    }
+
+    injectIntoIframe(iframe, frameId) {
+        try {
+            console.log(`Trying to inject into iframe:`, iframe.name || iframe.id || 'unnamed');
+            console.log(`iframe src:`, iframe.src);
+            console.log(`iframe srcdoc:`, iframe.srcdoc ? 'has srcdoc content' : 'no srcdoc');
+            
+            // Enhanced iframe access verification
+            const accessResult = this.canAccessIframe(iframe);
+            
+            if (!accessResult.accessible) {
+                const guidance = this.getIframeAccessGuidance(accessResult, iframe);
+                console.log(`❌ ${guidance.message}: ${guidance.guidance}`);
+                
+                // Store iframe info for debugging even if not accessible
+                this.storeInaccessibleIframe(iframe, accessResult);
+                return false;
+            }
+            
+            console.log(`✅ iframe accessible:`, accessResult);
+            
+            // Wait for document to be ready before injecting
+            this.waitForIframeDocumentReady(iframe, frameId);
+            
+            return true;
+        } catch (error) {
+            console.log(`❌ Failed to inject into iframe: ${error.message}`);
+            return false;
+        }
+    }
+
+    canAccessIframe(iframe) {
+        try {
+            // Test basic access to contentDocument
+            const doc = iframe.contentDocument || iframe.contentWindow?.document;
+            
+            if (!doc) {
+                return { 
+                    accessible: false, 
+                    reason: 'no-document',
+                    message: 'iframe document not available'
+                };
+            }
+            
+            // Test if we can read properties (this might throw SecurityError)
+            const readyState = doc.readyState;
+            const hasElements = !!(doc.body || doc.documentElement);
+            const protocol = doc.location?.protocol || 'unknown';
+            
+            console.log(`iframe access check passed:`, {
+                readyState,
+                hasElements,
+                protocol,
+                url: doc.location?.href || 'unknown'
+            });
+            
+            return { 
+                accessible: true, 
+                readyState, 
+                hasElements,
+                protocol,
+                document: doc
+            };
+        } catch (e) {
+            console.log(`iframe access check failed:`, e.name, e.message);
+            
+            if (e.name === 'SecurityError' || e.message.includes('cross-origin')) {
+                return { 
+                    accessible: false, 
+                    reason: 'security-error', 
+                    error: e.message,
+                    message: 'Cross-origin or security restriction'
+                };
+            }
+            
+            return { 
+                accessible: false, 
+                reason: 'unknown-error', 
+                error: e.message,
+                message: 'Unknown access error'
+            };
+        }
+    }
+
+    getIframeAccessGuidance(accessResult, iframe) {
+        const isLocalFile = window.location.protocol === 'file:';
+        
+        if (!accessResult.accessible) {
+            switch (accessResult.reason) {
+                case 'security-error':
+                    if (isLocalFile) {
+                        return {
+                            message: "🔧 Local file security restriction",
+                            guidance: "Use a local development server (python3 -m http.server 8000) to test iframe functionality."
+                        };
+                    }
+                    return {
+                        message: "🔒 Cross-origin iframe detected",
+                        guidance: "This iframe cannot be inspected due to browser security. Use framework-specific iframe switching."
+                    };
+                case 'no-document':
+                    return {
+                        message: "⏳ iframe not ready",
+                        guidance: "iframe content is still loading. Please wait and try again."
+                    };
+                default:
+                    return {
+                        message: "❌ iframe access blocked",
+                        guidance: "iframe content cannot be accessed. Check iframe source and security settings."
+                    };
+            }
+        }
+        
+        return {
+            message: "✅ iframe accessible",
+            guidance: "iframe content is ready for inspection."
+        };
+    }
+
+    storeInaccessibleIframe(iframe, accessResult) {
+        // Store information about inaccessible iframes for debugging
+        this.inaccessibleIframes = this.inaccessibleIframes || [];
+        this.inaccessibleIframes.push({
+            name: iframe.name || iframe.id || 'unnamed',
+            src: iframe.src || 'srcdoc',
+            reason: accessResult.reason,
+            message: accessResult.message,
+            timestamp: Date.now()
+        });
+    }
+
+    waitForIframeDocumentReady(iframe, frameId, retryCount = 0) {
+        const maxRetries = 5;
+        const retryDelay = 100; // Simplified to fixed delay
+        
+        try {
+            // Re-check accessibility on each retry
+            const accessResult = this.canAccessIframe(iframe);
+            
+            if (!accessResult.accessible) {
+                console.log(`❌ iframe document not accessible on retry ${retryCount + 1}, reason: ${accessResult.reason}`);
+                return;
+            }
+            
+            const iframeDoc = accessResult.document;
+            console.log(`Checking iframe document ready state: ${accessResult.readyState}`);
+            
+            // Check if document is ready and has proper structure
+            if (accessResult.readyState === 'complete' || 
+                (accessResult.readyState === 'interactive' && accessResult.hasElements)) {
+                console.log(`✅ iframe document ready, proceeding with injection`);
+                this.performIframeInjection(iframe, frameId);
+            } else if (retryCount < maxRetries) {
+                console.log(`iframe document not ready (${accessResult.readyState}), waiting... retry ${retryCount + 1}`);
+                
+                // Set up one-time event listener for readyState change
+                const readyStateListener = () => {
+                    console.log(`iframe document readyState changed to: ${iframeDoc.readyState}`);
+                    if (iframeDoc.readyState === 'complete' || iframeDoc.readyState === 'interactive') {
+                        iframeDoc.removeEventListener('readystatechange', readyStateListener);
+                        this.waitForIframeDocumentReady(iframe, frameId, retryCount + 1);
+                    }
+                };
+                
+                iframeDoc.addEventListener('readystatechange', readyStateListener);
+                
+                // Also set up a fallback timeout
+                setTimeout(() => {
+                    this.waitForIframeDocumentReady(iframe, frameId, retryCount + 1);
+                }, retryDelay);
+            } else {
+                console.log(`❌ Max retries reached for iframe document ready state`);
+            }
+        } catch (error) {
+            console.log(`❌ Error waiting for iframe document ready: ${error.message}`);
+            if (retryCount < maxRetries) {
+                setTimeout(() => {
+                    this.waitForIframeDocumentReady(iframe, frameId, retryCount + 1);
+                }, retryDelay);
+            }
+        }
+    }
+
+    performIframeInjection(iframe, frameId) {
+        try {
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            
+            // Set frame context for this iframe
+            const frameInfo = {
+                id: frameId,
+                name: iframe.name || iframe.id || `frame-${frameId}`,
+                src: iframe.src || 'srcdoc',
+                selector: this.generateCSSSelector(iframe),
+                parent: null // Will be set for nested iframes
+            };
+
+            // Create a new inspector instance for the iframe
+            this.createIframeInspector(iframeDoc, frameInfo);
+            
+            console.log(`✅ Successfully injected locator inspector into iframe: ${frameInfo.name}`);
+            return true;
+        } catch (error) {
+            console.log(`❌ Failed to perform iframe injection: ${error.message}`);
+            return false;
+        }
+    }
+
+    createIframeInspector(iframeDoc, frameInfo, parentFrameInfo = null) {
+        console.log(`Creating iframe inspector for: ${frameInfo.name}`);
+        console.log(`iframe document structure check:`, {
+            readyState: iframeDoc.readyState,
+            hasDocumentElement: !!iframeDoc.documentElement,
+            hasBody: !!iframeDoc.body,
+            bodyChildCount: iframeDoc.body ? iframeDoc.body.children.length : 0
+        });
+        
+        // Set parent frame information for nested iframes
+        if (parentFrameInfo) {
+            frameInfo.parent = parentFrameInfo;
+            console.log(`Setting parent frame: ${parentFrameInfo.name} for child: ${frameInfo.name}`);
+        }
+        
+        // Determine the best element to bind events to
+        const eventTarget = iframeDoc.body || iframeDoc.documentElement || iframeDoc;
+        console.log(`Using event target:`, eventTarget.tagName || 'document');
+        
+        // Create a lightweight inspector for iframe content
+        const iframeInspector = {
+            frameInfo: frameInfo,
+            parentInspector: this,
+            eventTarget: eventTarget,
+            
+            bindEvents() {
+                console.log(`Binding events for iframe: ${this.frameInfo.name} on target: ${this.eventTarget.tagName || 'document'}`);
+                
+                // Use event delegation with multiple event targets for better coverage
+                const bindToTarget = (target, targetName) => {
+                    console.log(`Binding events to ${targetName} in iframe: ${this.frameInfo.name}`);
+                    
+                    target.addEventListener('mouseover', (e) => {
+                        if (this.parentInspector.isEnabled) {
+                            console.log(`Mouse over iframe element (${targetName}):`, e.target.tagName, e.target.id || e.target.className);
+                            this.parentInspector.handleIframeMouseOver(e, this.frameInfo);
+                        }
+                    }, true); // Use capture phase for better event handling
+                    
+                    target.addEventListener('mouseout', (e) => {
+                        if (this.parentInspector.isEnabled) {
+                            this.parentInspector.handleMouseOut(e);
+                        }
+                    }, true);
+                    
+                    target.addEventListener('click', (e) => {
+                        if (this.parentInspector.isEnabled) {
+                            console.log(`Click on iframe element (${targetName}):`, e.target.tagName, e.target.id || e.target.className);
+                            this.parentInspector.handleIframeClick(e, this.frameInfo);
+                        }
+                    }, true);
+                    
+                    target.addEventListener('contextmenu', (e) => {
+                        if (this.parentInspector.isEnabled) {
+                            this.parentInspector.handleIframeClick(e, this.frameInfo);
+                        }
+                    }, true);
+                };
+                
+                // Bind to multiple targets for maximum coverage
+                if (iframeDoc.body) {
+                    bindToTarget(iframeDoc.body, 'body');
+                }
+                if (iframeDoc.documentElement) {
+                    bindToTarget(iframeDoc.documentElement, 'documentElement');
+                }
+                bindToTarget(iframeDoc, 'document');
+                
+                console.log(`✅ Events bound for iframe: ${this.frameInfo.name}`);
+            },
+            
+            // Add method to inject into nested iframes
+            injectIntoNestedIframes() {
+                console.log(`Looking for nested iframes in: ${this.frameInfo.name}`);
+                const nestedIframes = iframeDoc.querySelectorAll('iframe');
+                console.log(`Found ${nestedIframes.length} nested iframes in ${this.frameInfo.name}`);
+                
+                nestedIframes.forEach((nestedIframe, index) => {
+                    const nestedFrameId = `${this.frameInfo.id}-nested-${index}`;
+                    console.log(`Attempting to inject into nested iframe: ${nestedIframe.name || nestedIframe.id || 'unnamed'}`);
+                    
+                    // Handle nested iframe injection with timing
+                    this.parentInspector.handleNestedIframeInjection(nestedIframe, nestedFrameId, this.frameInfo);
+                });
+            }
+        };
+        
+        iframeInspector.bindEvents();
+        
+        // After binding events, look for nested iframes
+        setTimeout(() => {
+            iframeInspector.injectIntoNestedIframes();
+        }, 300); // Increased delay for document structure to stabilize
+        
+        // Store reference for debugging
+        this.iframeInspectors = this.iframeInspectors || [];
+        this.iframeInspectors.push(iframeInspector);
+        
+        return iframeInspector;
+    }
+
+    handleNestedIframeInjection(nestedIframe, nestedFrameId, parentFrameInfo) {
+        console.log(`Handling nested iframe injection: ${nestedIframe.name || nestedIframe.id || 'unnamed'} in parent: ${parentFrameInfo.name}`);
+        
+        // Set up load event listener first for both srcdoc and src iframes
+        const handleLoad = () => {
+            console.log(`Nested iframe load event fired for ${nestedIframe.srcdoc ? 'srcdoc' : 'src'} iframe`);
+            setTimeout(() => {
+                this.injectIntoNestedIframe(nestedIframe, nestedFrameId, parentFrameInfo);
+            }, 50);
+        };
+        
+        nestedIframe.addEventListener('load', handleLoad, { once: true });
+        
+        // For srcdoc iframes, also try immediate injection with delay
+        if (nestedIframe.srcdoc) {
+            console.log(`Detected nested srcdoc iframe, setting up immediate and delayed injection`);
+            setTimeout(() => {
+                this.injectIntoNestedIframe(nestedIframe, nestedFrameId, parentFrameInfo);
+            }, 150);
+        } else if (nestedIframe.src) {
+            // For src iframes, try immediate injection in case already loaded
+            console.log(`Detected nested src iframe: ${nestedIframe.src}, trying immediate injection`);
+            this.injectIntoNestedIframe(nestedIframe, nestedFrameId, parentFrameInfo);
+        }
+    }
+
+    injectIntoNestedIframe(nestedIframe, nestedFrameId, parentFrameInfo) {
+        try {
+            console.log(`Trying to inject into nested iframe:`, nestedIframe.name || nestedIframe.id || 'unnamed');
+            
+            // Check if iframe is accessible (same-origin)
+            let nestedIframeDoc;
+            try {
+                nestedIframeDoc = nestedIframe.contentDocument || nestedIframe.contentWindow.document;
+            } catch (e) {
+                console.log(`❌ Cannot access nested iframe content (cross-origin restriction): ${nestedIframe.src || 'srcdoc'}`);
+                return false;
+            }
+            
+            if (nestedIframeDoc) {
+                console.log(`nested iframe contentDocument accessible:`, !!nestedIframeDoc);
+                console.log(`nested iframe document readyState:`, nestedIframeDoc.readyState);
+                
+                // Create frame info for nested iframe
+                const nestedFrameInfo = {
+                    id: nestedFrameId,
+                    name: nestedIframe.name || nestedIframe.id || `nested-frame-${nestedFrameId}`,
+                    src: nestedIframe.src || 'srcdoc',
+                    selector: this.generateCSSSelector(nestedIframe),
+                    parent: parentFrameInfo
+                };
+                
+                // Wait for document to be ready before injecting
+                this.waitForNestedIframeDocumentReady(nestedIframe, nestedFrameInfo);
+                
+                return true;
+            } else {
+                console.log(`❌ Cannot access nested iframe contentDocument: ${nestedIframe.src || 'srcdoc'}`);
+                return false;
+            }
+        } catch (error) {
+            console.log(`❌ Failed to inject into nested iframe: ${error.message}`);
+            return false;
+        }
+    }
+
+    waitForNestedIframeDocumentReady(nestedIframe, nestedFrameInfo, retryCount = 0) {
+        const maxRetries = 5;
+        const retryDelay = 100;
+        
+        try {
+            const nestedIframeDoc = nestedIframe.contentDocument || nestedIframe.contentWindow.document;
+            
+            if (!nestedIframeDoc) {
+                console.log(`❌ nested iframe document not accessible, retry ${retryCount + 1}/${maxRetries}`);
+                if (retryCount < maxRetries) {
+                    setTimeout(() => {
+                        this.waitForNestedIframeDocumentReady(nestedIframe, nestedFrameInfo, retryCount + 1);
+                    }, retryDelay);
+                }
+                return;
+            }
+            
+            console.log(`Checking nested iframe document ready state: ${nestedIframeDoc.readyState}`);
+            
+            // Check if document is ready and has proper structure
+            if (nestedIframeDoc.readyState === 'complete' || 
+                (nestedIframeDoc.readyState === 'interactive' && (nestedIframeDoc.body || nestedIframeDoc.documentElement))) {
+                console.log(`✅ nested iframe document ready, proceeding with injection`);
+                this.createIframeInspector(nestedIframeDoc, nestedFrameInfo, nestedFrameInfo.parent);
+            } else if (retryCount < maxRetries) {
+                console.log(`nested iframe document not ready (${nestedIframeDoc.readyState}), waiting... retry ${retryCount + 1}`);
+                
+                setTimeout(() => {
+                    this.waitForNestedIframeDocumentReady(nestedIframe, nestedFrameInfo, retryCount + 1);
+                }, retryDelay);
+            } else {
+                console.log(`❌ Max retries reached for nested iframe document ready state`);
+            }
+        } catch (error) {
+            console.log(`❌ Error waiting for nested iframe document ready: ${error.message}`);
+            if (retryCount < maxRetries) {
+                setTimeout(() => {
+                    this.waitForNestedIframeDocumentReady(nestedIframe, nestedFrameInfo, retryCount + 1);
+                }, retryDelay);
+            }
+        }
+    }
+
+    injectIntoNestedIframe(nestedIframe, nestedFrameId, parentFrameInfo) {
+        try {
+            console.log(`Trying to inject into nested iframe:`, nestedIframe.name || nestedIframe.id || 'unnamed');
+            console.log(`Nested iframe parent:`, parentFrameInfo.name);
+            
+            // Check if nested iframe is accessible (same-origin)
+            if (nestedIframe.contentDocument) {
+                const nestedIframeDoc = nestedIframe.contentDocument;
+                console.log(`Nested iframe contentDocument accessible:`, !!nestedIframeDoc);
+                console.log(`Nested iframe document readyState:`, nestedIframeDoc.readyState);
+                
+                // Set frame context for this nested iframe
+                const nestedFrameInfo = {
+                    id: nestedFrameId,
+                    name: nestedIframe.name || nestedIframe.id || `nested-frame-${nestedFrameId}`,
+                    src: nestedIframe.src || 'srcdoc',
+                    selector: this.generateCSSSelector(nestedIframe),
+                    parent: parentFrameInfo // Set parent frame reference
+                };
+
+                // Create a new inspector instance for the nested iframe
+                this.createIframeInspector(nestedIframeDoc, nestedFrameInfo, parentFrameInfo);
+                
+                console.log(`✅ Successfully injected locator inspector into nested iframe: ${nestedFrameInfo.name}`);
+                return true;
+            } else {
+                console.log(`❌ Cannot access nested iframe content (cross-origin or not ready): ${nestedIframe.src || 'srcdoc'}`);
+                return false;
+            }
+        } catch (error) {
+            console.log(`❌ Failed to inject into nested iframe: ${error.message}`);
+            return false;
+        }
+    }
+
+    handleIframeMouseOver(e, frameInfo) {
+        console.log(`Iframe mouse over: ${frameInfo.name}, element:`, e.target.tagName, e.target.id || e.target.className);
+        
+        this.frameContext = frameInfo;
+        this.hoveredElement = e.target;
+        
+        // Add highlight to iframe element
+        this.addHighlight(e.target);
+        
+        // Show tooltip with iframe context
+        this.showTooltip(e);
+    }
+
+    handleIframeClick(e, frameInfo) {
+        console.log(`Iframe click: ${frameInfo.name}, element:`, e.target.tagName, e.target.id || e.target.className);
+        
+        e.preventDefault();
+        e.stopPropagation();
+        
+        this.frameContext = frameInfo;
+        const locators = this.generateIframeLocators(e.target, frameInfo);
+        
+        console.log(`Generated iframe locators:`, locators);
+        
+        if (e.ctrlKey || e.altKey) {
+            this.copyToClipboard(locators.xpath);
+            this.addToHistory(locators);
+            this.showIframeXPathNotification(frameInfo);
+        } else {
+            this.copyToClipboard(locators.css);
+            this.addToHistory(locators);
+            this.showIframeCSSNotification(frameInfo);
+        }
+    }
+
+    showIframeCSSNotification(frameInfo) {
+        // Show enhanced notification for iframe CSS
+        this.showCopyNotification('CSS (iframe element)');
+        
+        // Log additional context for iframe CSS usage
+        console.log(`
+🖼️ iframe CSS Usage Guide:
+- Copied CSS: Works within iframe document context
+- iframe selector: iframe[name='${frameInfo.name}']
+- Frame switching required for automation:
+  
+Selenium: 
+  driver.switch_to.frame('${frameInfo.name}')
+  element = driver.find_element(By.CSS_SELECTOR, '${this.hoveredElement ? this.generateCSSSelector(this.hoveredElement) : 'copied-css'}')
+  
+Playwright:
+  page.frame('${frameInfo.name}').locator('${this.hoveredElement ? this.generateCSSSelector(this.hoveredElement) : 'copied-css'}')
+        `);
+    }
+
+    showIframeXPathNotification(frameInfo) {
+        // Show enhanced notification for iframe XPath
+        this.showCopyNotification('XPath (iframe element)');
+        
+        // Log additional context for iframe XPath usage
+        console.log(`
+🖼️ iframe XPath Usage Guide:
+- Copied XPath: Works within iframe document context
+- iframe locator: //iframe[@name='${frameInfo.name}']
+- Frame switching required for automation:
+  
+Selenium: 
+  driver.switch_to.frame('${frameInfo.name}')
+  element = driver.find_element(By.XPATH, '${this.hoveredElement ? this.generateXPath(this.hoveredElement) : 'copied-xpath'}')
+  
+Playwright:
+  page.frame('${frameInfo.name}').locator('xpath=${this.hoveredElement ? this.generateXPath(this.hoveredElement) : 'copied-xpath'}')
+        `);
+    }
+
+    generateIframeLocators(element, frameInfo) {
+        const baseLocators = this.generateLocators(element);
+        
+        console.log(`Generating iframe locators for frame: ${frameInfo.name}`);
+        console.log(`Base locators:`, baseLocators);
+        
+        // Build frame path for iframe identification
+        const framePath = this.buildFramePath(frameInfo);
+        console.log(`Frame path: ${framePath}`);
+        
+        // For XPath, provide separate iframe and element locators
+        const iframeXPath = this.buildIframeLocatorXPath(frameInfo);
+        
+        const iframeLocators = {
+            css: baseLocators.css, // Element CSS only - works within iframe context
+            cssNote: "CSS requires frame switching - use framework-specific methods",
+            iframeSelector: framePath, // CSS to locate iframe element
+            xpath: baseLocators.xpath, // Element XPath only - works within iframe context
+            iframeLocator: iframeXPath, // XPath to locate the iframe itself
+            frameSwitching: {
+                selenium: `driver.switch_to.frame('${frameInfo.name}'); element = driver.find_element(By.CSS_SELECTOR, '${baseLocators.css}')`,
+                playwright: `page.frame('${frameInfo.name}').locator('${baseLocators.css}')`,
+                cypress: `cy.iframe('[name="${frameInfo.name}"]').find('${baseLocators.css}')`
+            },
+            note: "iframe content requires frame switching in automation tools"
+        };
+        
+        console.log(`Final iframe locators:`, iframeLocators);
+        return iframeLocators;
+    }
+
+    buildIframeLocatorXPath(frameInfo) {
+        const frames = [];
+        let currentFrame = frameInfo;
+        
+        // Build XPath to locate iframe elements (not content)
+        while (currentFrame) {
+            frames.unshift(`//iframe[@name='${currentFrame.name}']`);
+            currentFrame = currentFrame.parent;
+        }
+        
+        return frames.join('');
+    }
+
+    buildFramePath(frameInfo) {
+        const frames = [];
+        let currentFrame = frameInfo;
+        
+        // Build frame hierarchy from child to parent
+        while (currentFrame) {
+            frames.unshift(`iframe[name="${currentFrame.name}"]`);
+            currentFrame = currentFrame.parent;
+        }
+        
+        return frames.join(' ');
+    }
+
+    buildXPathFramePath(frameInfo) {
+        // This method is deprecated - XPath cannot traverse iframe boundaries
+        // Use buildIframeLocatorXPath for iframe element location
+        // and regular XPath for element within iframe document
+        console.warn('buildXPathFramePath is deprecated - use buildIframeLocatorXPath instead');
+        return this.buildIframeLocatorXPath(frameInfo);
+    }
+
+    buildPlaywrightFramePath(frameInfo, baseSelector) {
+        const frames = [];
+        let currentFrame = frameInfo;
+        
+        // Build frame hierarchy from parent to child
+        while (currentFrame) {
+            frames.push(currentFrame.name);
+            currentFrame = currentFrame.parent;
+        }
+        
+        // Reverse to get parent -> child order
+        frames.reverse();
+        
+        if (frames.length === 1) {
+            return `page.frame('${frames[0]}').locator('${baseSelector}')`;
+        } else {
+            // For nested frames, chain the frame calls
+            let result = `page.frame('${frames[0]}')`;
+            for (let i = 1; i < frames.length; i++) {
+                result += `.frame('${frames[i]}')`;
+            }
+            result += `.locator('${baseSelector}')`;
+            return result;
+        }
+    }
+
+    buildSeleniumFramePath(frameInfo, baseSelector) {
+        const frames = [];
+        let currentFrame = frameInfo;
+        
+        // Build frame hierarchy from parent to child
+        while (currentFrame) {
+            frames.push(currentFrame.name);
+            currentFrame = currentFrame.parent;
+        }
+        
+        // Reverse to get parent -> child order
+        frames.reverse();
+        
+        let result = frames.map(frameName => `driver.switch_to.frame('${frameName}')`).join('; ');
+        result += `; driver.find_element(By.CSS_SELECTOR, '${baseSelector}')`;
+        return result;
+    }
+
+    // ================== SHADOW DOM SUPPORT ==================
+
+    setupShadowDOMObserver() {
+        // Watch for elements with shadow roots
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === Node.ELEMENT_NODE && node.shadowRoot) {
+                        this.observeShadowRoot(node.shadowRoot, node);
+                    }
+                });
+            });
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        // Check existing shadow roots
+        this.traverseExistingShadowRoots(document.body);
+    }
+
+    traverseExistingShadowRoots(root) {
+        if (root.shadowRoot) {
+            this.observeShadowRoot(root.shadowRoot, root);
+        }
+        
+        if (root.children) {
+            Array.from(root.children).forEach(child => {
+                this.traverseExistingShadowRoots(child);
+            });
+        }
+    }
+
+    observeShadowRoot(shadowRoot, shadowHost) {
+        // Add event listeners to shadow DOM elements
+        shadowRoot.addEventListener('mouseover', (e) => {
+            if (this.isEnabled) {
+                this.handleShadowMouseOver(e, shadowHost);
+            }
+        });
+        
+        shadowRoot.addEventListener('click', (e) => {
+            if (this.isEnabled) {
+                this.handleShadowClick(e, shadowHost);
+            }
+        });
+    }
+
+    handleShadowMouseOver(e, shadowHost) {
+        this.shadowContext = {
+            host: shadowHost,
+            hostSelector: this.generateCSSSelector(shadowHost)
+        };
+        this.hoveredElement = e.target;
+        this.addHighlight(e.target);
+        this.showTooltip(e);
+    }
+
+    handleShadowClick(e, shadowHost) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        this.shadowContext = {
+            host: shadowHost,
+            hostSelector: this.generateCSSSelector(shadowHost)
+        };
+        
+        const locators = this.generateShadowDOMLocators(e.target, this.shadowContext);
+        
+        if (e.ctrlKey || e.altKey) {
+            this.copyToClipboard(locators.xpath);
+            this.addToHistory(locators);
+            this.showCopyNotification('XPath');
+        } else {
+            this.copyToClipboard(locators.css);
+            this.addToHistory(locators);
+            this.showCopyNotification('CSS');
+        }
+    }
+
+    generateShadowDOMLocators(element, shadowContext) {
+        const elementSelector = this.generateCSSSelector(element);
+        
+        return {
+            css: `${shadowContext.hostSelector}::shadow ${elementSelector}`,
+            xpath: `//${shadowContext.hostSelector}//shadow-root//${elementSelector}`,
+            framework: {
+                playwright: `page.locator('${shadowContext.hostSelector}').locator('${elementSelector}')`,
+                cypress: `cy.get('${shadowContext.hostSelector}').shadow().find('${elementSelector}')`
+            }
+        };
+    }
+
+    // ================== ENHANCED TOOLTIP WITH CONTEXT ==================
+
+    getContextInfo() {
+        let contextInfo = '';
+        
+        if (this.frameContext) {
+            const frameHierarchy = this.buildFrameHierarchy(this.frameContext);
+            contextInfo += `
+                <div style="margin-bottom: 6px; padding: 4px 6px; background: #2d5aa0; border-radius: 4px;">
+                    <span style="color: #90cdf4; font-weight: bold;">🖼️ iframe:</span>
+                    <span style="color: #e2e8f0; font-size: 11px;">${frameHierarchy}</span><br>
+                    <span style="color: #ffd700; font-size: 10px;">⚠️ XPath requires frame switching</span>
+                </div>
+            `;
+        }
+        
+        if (this.shadowContext) {
+            contextInfo += `
+                <div style="margin-bottom: 6px; padding: 4px 6px; background: #553c9a; border-radius: 4px;">
+                    <span style="color: #c4b5fd; font-weight: bold;">🌑 Shadow DOM:</span>
+                    <span style="color: #e2e8f0; font-size: 11px;">${this.shadowContext.hostSelector}</span>
+                </div>
+            `;
+        }
+        
+        return contextInfo;
+    }
+
+    buildFrameHierarchy(frameInfo) {
+        const frames = [];
+        let currentFrame = frameInfo;
+        
+        // Build frame hierarchy from child to parent
+        while (currentFrame) {
+            frames.unshift(currentFrame.name);
+            currentFrame = currentFrame.parent;
+        }
+        
+        return frames.join(' > ');
+    }
+
+    resetContexts() {
+        this.frameContext = null;
+        this.shadowContext = null;
     }
 }
 

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Standard iframe Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        iframe {
+            border: 2px solid #007bff;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .test-element {
+            background: #28a745;
+            color: white;
+            padding: 10px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Standard iframe Test - QA Locator Inspector</h1>
+    <p>This page tests iframe element detection with standard HTML document structure (not srcdoc).</p>
+    
+    <div class="section">
+        <h2>📄 Regular DOM Elements</h2>
+        <button id="regular-button" class="test-element">Regular Button</button>
+        <input type="text" id="regular-input" placeholder="Regular input field" class="test-element">
+        <div class="test-element" data-testid="regular-div">Regular Div Element</div>
+    </div>
+
+    <div class="section">
+        <h2>🖼️ Standard HTML iframe with src URL</h2>
+        <p>Test iframe element detection and locator generation for iframe with standard HTML document loaded from a URL:</p>
+        
+        <!-- iframe with standard HTML document -->
+        <iframe id="standard-iframe" name="standard-frame" width="500" height="300" src="iframe-content.html"></iframe>
+    </div>
+
+    <script>
+        // Add some interaction logging
+        document.addEventListener('click', (e) => {
+            console.log('Clicked element in main page:', e.target);
+        });
+    </script>
+</body>
+</html>

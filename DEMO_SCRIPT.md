@@ -51,22 +51,49 @@ chrome://extensions/
    - Show downloaded JSON file
    - Open file to show structured data
 
-### Step 4: Real-World Testing Scenario (30 seconds)
+### Step 4: Advanced DOM Demo (1.5 minutes)
+
+**Navigate to test-iframe-shadow.html (if available):**
+
+1. **iframe Testing:**
+   - Hover over elements inside the "Simple iframe" section
+   - Point out the 🖼️ iframe context indicator in tooltip
+   - Show frame-aware locator: `iframe[name="simple-frame"] >>> button`
+   - Explain: "Perfect for payment widgets and embedded content!"
+
+2. **Shadow DOM Testing:**
+   - Hover over elements in "Custom Widget" section
+   - Point out the 🌑 Shadow DOM context indicator
+   - Show shadow-piercing locator: `custom-widget::shadow button`
+   - Explain: "Works with modern web components and frameworks!"
+
+3. **Complex Scenarios:**
+   - Test the "iframe with Shadow DOM" section
+   - Show both context indicators together
+   - Demonstrate complex nested locator generation
+
+### Step 5: Real-World Testing Scenario (30 seconds)
 
 **QA Workflow Integration:**
 ```javascript
 // Show how copied selectors work in test frameworks:
 
-// Playwright
+// Regular DOM elements
 await page.click('[name="q"]');
 await page.fill('[name="q"]', 'test query');
 
-// Selenium Python  
-driver.find_element(By.CSS_SELECTOR, '[name="q"]').click()
-driver.find_element(By.CSS_SELECTOR, '[name="q"]').send_keys('test query')
+// iframe elements (Playwright)
+await page.frame('payment-widget').locator('input[placeholder="Card Number"]').fill('1234');
 
-// Cypress
-cy.get('[name="q"]').click().type('test query');
+// Shadow DOM elements (Playwright)  
+await page.locator('custom-checkout').locator('button[data-testid="submit"]').click();
+
+// Selenium Python with iframe
+driver.switch_to.frame('payment-widget')
+driver.find_element(By.CSS_SELECTOR, 'input[placeholder="Card Number"]').send_keys('1234')
+
+// Cypress with shadow DOM
+cy.get('custom-checkout').shadow().find('button[data-testid="submit"]').click();
 ```
 
 ## 🎯 Key Selling Points for QA Team
@@ -84,6 +111,12 @@ cy.get('[name="q"]').click().type('test query');
 - History tracking for documentation
 - Export for test case documentation
 - Priority-based locator selection
+
+### "Advanced DOM Support"
+- **iframe Elements:** Handles payment widgets, embedded content, third-party integrations
+- **Shadow DOM:** Works with modern web components and frameworks (Lit, Stencil, etc.)
+- **Context Awareness:** Visual indicators show iframe/shadow DOM context
+- **Framework Integration:** Generates frame-switching and shadow-piercing code
 
 ### "Instant Productivity Boost"
 - Save 10+ minutes per test case

@@ -125,6 +125,91 @@ document.querySelectorAll('COPIED_SELECTOR').length; // Should be 1 for unique s
    - [ ] Test on sites with strict CSP
    - [ ] Verify no console errors
 
+## ✅ Advanced DOM Testing
+
+### iframe Testing
+Use both test files for comprehensive iframe testing:
+
+#### Standard iframe Testing (`test-standard-iframe.html`)
+1. **Standard HTML iframe Elements**
+   - [ ] Open `test-standard-iframe.html` via local server (http://localhost:8000)
+   - [ ] Enable inspector and hover over elements inside standard iframe
+   - [ ] Tooltip shows 🖼️ iframe context indicator with warning about XPath
+   - [ ] CSS locator shows element CSS only (no iframe prefix)
+   - [ ] XPath shows element XPath only (no iframe prefix)
+   - [ ] Click iframe elements copies frame-aware CSS or element-only XPath ✅
+   - [ ] Test nested iframe elements for proper hierarchy
+   - [ ] Verify console shows successful iframe injection messages
+
+2. **iframe CSS Testing**
+   - [ ] Click iframe element to copy CSS
+   - [ ] CSS should be element-only: `button[id="iframe-btn-1"]`
+   - [ ] Manual test in DevTools:
+     - Switch context: `document.querySelector('iframe[name="standard-frame"]').contentDocument`
+     - Test CSS: `querySelector('button[id="iframe-btn-1"]')` - should find element ✅
+   - [ ] Check console for iframe switching guidance
+
+3. **iframe XPath Testing**
+   - [ ] Ctrl+Click iframe element to copy XPath
+   - [ ] XPath should be element-only: `//button[text()="iframe Button"]`
+   - [ ] Manual test in DevTools:
+     - Switch context: `document.querySelector('iframe[name="standard-frame"]').contentDocument`
+     - Test XPath: `$x('//button[text()="iframe Button"]')` - should find element ✅
+   - [ ] Check console for iframe switching guidance
+
+#### Advanced iframe Testing (`test-iframe-shadow.html`)  
+2. **srcdoc iframe Elements**
+   - [ ] Enable inspector and hover over elements inside "Simple iframe" (srcdoc)
+   - [ ] Tooltip shows 🖼️ iframe context indicator
+   - [ ] CSS locator includes iframe context: `iframe[name="simple-frame"] >>> button`
+   - [ ] Click iframe elements copies frame-aware locators ✅
+
+3. **Nested iframe Elements**
+   - [ ] Hover over elements in "Parent iframe" 
+   - [ ] Hover over elements in "Nested iframe"
+   - [ ] Context indicators show correct frame hierarchy
+   - [ ] Generated locators include proper frame path
+
+4. **Cross-origin iframe Testing**
+   - [ ] Test on sites with external iframe widgets (YouTube, PayPal, etc.)
+   - [ ] Extension shows "Cannot access iframe content" for cross-origin frames
+   - [ ] Console shows clear cross-origin error messages
+   - [ ] No JavaScript errors for inaccessible iframes
+
+### Shadow DOM Testing
+Use `test-iframe-shadow.html` shadow DOM section:
+
+1. **Custom Web Components**
+   - [ ] Hover over elements inside "Custom Widget"
+   - [ ] Tooltip shows 🌑 Shadow DOM context indicator
+   - [ ] CSS locator includes shadow piercing: `custom-widget::shadow button`
+   - [ ] Shadow DOM elements highlight correctly ✅
+
+2. **Shadow DOM Forms**
+   - [ ] Test input fields inside shadow DOM
+   - [ ] Test buttons and interactive elements
+   - [ ] Verify shadow context appears in history
+
+3. **Mixed Scenarios**
+   - [ ] Test "iframe with Shadow DOM" section
+   - [ ] Elements show both 🖼️ and 🌑 context indicators
+   - [ ] Complex locators generated correctly
+
+### Framework Compatibility (Advanced)
+1. **Playwright iframe/Shadow Testing**
+   ```javascript
+   // Test these in Playwright console
+   page.frame('simple-frame').locator('button') // Should work
+   page.locator('custom-widget').locator('button') // Should work
+   ```
+
+2. **Selenium iframe Testing**
+   ```python
+   # Test frame switching
+   driver.switch_to.frame('simple-frame')
+   driver.find_element(By.CSS_SELECTOR, 'button')
+   ```
+
 ## ✅ Performance Testing
 
 1. **Large Pages**
@@ -137,6 +222,11 @@ document.querySelectorAll('COPIED_SELECTOR').length; // Should be 1 for unique s
    - [ ] Extension should use minimal memory
    - [ ] No excessive CPU usage
 
+3. **Advanced DOM Performance**
+   - [ ] Test on pages with many iframes (news sites, dashboards)
+   - [ ] Test on pages with many web components
+   - [ ] iframe injection should be fast and efficient
+
 ## 🎯 Success Criteria
 
 **Extension passes testing if:**
@@ -144,8 +234,20 @@ document.querySelectorAll('COPIED_SELECTOR').length; // Should be 1 for unique s
 - ✅ Generated locators are unique and reliable
 - ✅ UI is responsive and intuitive
 - ✅ Compatible with major testing frameworks
+- ✅ iframe elements detected and locators generated correctly
+- ✅ Shadow DOM elements accessible with proper context indicators
 - ✅ No performance issues on typical websites
+
+## 🎁 Advanced Feature Success
+
+**iframe & Shadow DOM features pass if:**
+- ✅ iframe context indicators (🖼️) appear in tooltips
+- ✅ Shadow DOM context indicators (🌑) appear in tooltips  
+- ✅ Frame-aware locators generated for iframe elements
+- ✅ Shadow-piercing locators generated for web components
+- ✅ Mixed scenarios (iframe + shadow DOM) work correctly
+- ✅ Cross-origin iframe limitations handled gracefully
 
 ## 🚀 Ready for QA Team Deployment!
 
-Once all tests pass, the extension is ready for your QA team to use in their daily testing workflow.
+Once all tests pass, the extension is ready for your QA team to use in their daily testing workflow, including advanced scenarios with iframes and shadow DOM elements commonly found in modern web applications.

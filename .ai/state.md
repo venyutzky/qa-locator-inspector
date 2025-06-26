@@ -1,6 +1,6 @@
 ---
-previous_migration: 20250625143500_remove_erudifi_branding_for_public_release.md
-current_migration: 20250625144500_remove_hardcoded_local_paths.md
+previous_migration: 20250626163000_fix_iframe_xpath_generation_logic.md
+current_migration: 20250626164000_audit_and_fix_css_iframe_selector_generation.md
 ---
 
 ## project-chrome-extension
@@ -30,6 +30,11 @@ qa-locator-inspector/
 ├── DEMO_SCRIPT.md         # Team presentation guide
 ├── LOCATOR_RULES_TEST.md  # Locator rules compliance testing
 ├── TEXT_ASSERTION_GUIDE.md # Text locator and assertion testing guide
+├── IFRAME_SHADOW_DOM_GUIDE.md # **NEW** Comprehensive iframe and shadow DOM testing guide
+├── test-iframe-shadow.html # **ENHANCED** Advanced iframe and shadow DOM test scenarios
+├── test-standard-iframe.html # **NEW** Standard iframe with src URL testing
+├── iframe-content.html    # **NEW** Standard HTML iframe content for testing
+├── nested-iframe-content.html # **NEW** Nested iframe content for testing
 └── .ai/                   # AI project management
     ├── state.md           # This file
     └── changelogs/        # Change tracking
@@ -40,7 +45,15 @@ qa-locator-inspector/
         ├── 20250620134709_enhance_hierarchical_locator_generation_strategy.md (applied)
         ├── 20250620140631_fix_uniqueness_validation_and_text_detection_issues.md (applied)
         ├── 20250625143500_remove_erudifi_branding_for_public_release.md (applied)
-        └── 20250625144500_remove_hardcoded_local_paths.md (applied)
+        ├── 20250625144500_remove_hardcoded_local_paths.md (applied)
+        ├── 20250626151200_add_iframe_and_shadow_dom_support.md (applied)
+        ├── 20250626152500_fix_iframe_locator_detection_for_srcdoc.md (applied)
+        ├── 20250626153000_fix_nested_iframe_recursive_injection.md (applied)
+        ├── 20250626153500_fix_iframe_document_structure_handling.md (applied)
+        ├── 20250626160000_fix_iframe_standard_html_document_handling.md (applied)
+        ├── 20250626162000_fix_iframe_local_file_access_and_security_context.md (applied)
+        ├── 20250626163000_fix_iframe_xpath_generation_logic.md (applied)
+        └── 20250626164000_audit_and_fix_css_iframe_selector_generation.md (applied)
 ```
 
 ### Dependencies
@@ -59,7 +72,13 @@ qa-locator-inspector/
 - Copy XPath locator: Ctrl+Click, Alt+Click, or Right-click any element
 - Export history: Click "Export History" in popup
 
-### Core Features (Latest - Hierarchical Locator Generation)
+### Core Features (Latest - iframe and Shadow DOM Support)
+- **Advanced DOM Support**:
+  - **iframe Detection**: Automatically injects inspector into accessible iframes
+  - **Shadow DOM Traversal**: Detects and generates locators for shadow DOM elements
+  - **Context Indicators**: Visual 🖼️ iframe and 🌑 shadow DOM indicators in tooltips
+  - **Cross-frame Locators**: Generates frame-switching code for Playwright/Selenium
+  - **Shadow Piercing**: Creates shadow DOM-aware selectors for web components
 - **Hierarchical CSS Selectors**: 
   - Smart parent-child relationships when direct attributes are not unique
   - Example: `.navigation > .menu > a[href="/profile"]` for better specificity
@@ -83,6 +102,7 @@ qa-locator-inspector/
 - **Enhanced User Interface**:
   - **Mode Indicators**: Visual feedback showing CSS Mode vs XPath Mode
   - **Hierarchical Indicators**: 🏗️ symbol and depth information for hierarchical selectors
+  - **Context Indicators**: 🖼️ iframe and 🌑 shadow DOM context in tooltips
   - **Keyboard Shortcuts**: Real-time tooltip updates when modifier keys pressed
   - **Color-Coded Notifications**: Green for CSS, Purple for XPath
   - **Dual History Display**: Both CSS and XPath shown in popup history

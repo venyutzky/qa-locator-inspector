@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QA Locator Inspector - iframe and Shadow DOM Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+        iframe {
+            border: 2px solid #007bff;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .shadow-host {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .test-element {
+            background: #28a745;
+            color: white;
+            padding: 10px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .nested-iframe-container {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 QA Locator Inspector - Advanced DOM Testing</h1>
+    <p>This page tests iframe and shadow DOM element detection capabilities.</p>
+    
+    <div class="section">
+        <h2>📄 Regular DOM Elements</h2>
+        <button id="regular-button" class="test-element">Regular Button</button>
+        <input type="text" id="regular-input" placeholder="Regular input field" class="test-element">
+        <div class="test-element" data-testid="regular-div">Regular Div Element</div>
+    </div>
+
+    <div class="section">
+        <h2>🖼️ iframe Elements</h2>
+        <p>Test iframe element detection and locator generation:</p>
+        
+        <!-- Simple iframe -->
+        <iframe id="simple-iframe" name="simple-frame" width="400" height="200" srcdoc="
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { font-family: Arial, sans-serif; padding: 20px; background: #f8f9fa; }
+                    .iframe-button { background: #dc3545; color: white; padding: 10px; border: none; border-radius: 4px; cursor: pointer; }
+                    .iframe-input { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+                </style>
+            </head>
+            <body>
+                <h3>Simple iframe Content</h3>
+                <button id='iframe-btn-1' class='iframe-button'>iframe Button</button>
+                <input type='text' id='iframe-input-1' class='iframe-input' placeholder='iframe input field'>
+                <div id='iframe-div-1' style='background: #6f42c1; color: white; padding: 10px; margin: 5px; border-radius: 4px;'>iframe Div Element</div>
+            </body>
+            </html>
+        "></iframe>
+
+        <!-- Nested iframe setup -->
+        <div class="nested-iframe-container">
+            <h3>Nested iframe Example</h3>
+            <iframe id="parent-iframe" name="parent-frame" width="450" height="300" srcdoc="
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 15px; background: #e3f2fd; }
+                        .parent-element { background: #2196f3; color: white; padding: 10px; margin: 5px; border-radius: 4px; }
+                    </style>
+                </head>
+                <body>
+                    <h4>Parent iframe</h4>
+                    <button id='parent-btn' class='parent-element'>Parent iframe Button</button>
+                    
+                    <iframe id='nested-iframe' name='nested-frame' width='350' height='150' srcdoc=&quot;
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <style>
+                                body { font-family: Arial, sans-serif; padding: 10px; background: #fff3e0; }
+                                .nested-element { background: #ff9800; color: white; padding: 8px; margin: 3px; border-radius: 4px; }
+                            </style>
+                        </head>
+                        <body>
+                            <h5>Nested iframe</h5>
+                            <button id='nested-btn' class='nested-element'>Nested iframe Button</button>
+                            <input type='text' id='nested-input' class='nested-element' placeholder='Nested input'>
+                        </body>
+                        </html>
+                    &quot;></iframe>
+                </body>
+                </html>
+            "></iframe>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>🌑 Shadow DOM Elements</h2>
+        <p>Test shadow DOM element detection and locator generation:</p>
+        
+        <!-- Custom Web Component with Shadow DOM -->
+        <div id="shadow-container">
+            <custom-widget id="widget-1" data-testid="custom-widget"></custom-widget>
+            <custom-form id="form-widget" data-name="test-form"></custom-form>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>🔗 Mixed Scenarios</h2>
+        <p>Test complex combinations of iframe and shadow DOM:</p>
+        
+        <!-- iframe containing shadow DOM -->
+        <iframe id="shadow-iframe" name="shadow-frame" width="400" height="250" srcdoc="
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { font-family: Arial, sans-serif; padding: 20px; background: #f1f3f4; }
+                </style>
+            </head>
+            <body>
+                <h4>iframe with Shadow DOM</h4>
+                <div id='iframe-shadow-container'>
+                    <iframe-widget id='iframe-widget' data-testid='iframe-shadow-widget'></iframe-widget>
+                </div>
+                
+                <script>
+                    class IframeWidget extends HTMLElement {
+                        constructor() {
+                            super();
+                            const shadow = this.attachShadow({mode: 'open'});
+                            shadow.innerHTML = \`
+                                <style>
+                                    .shadow-content { background: #4caf50; color: white; padding: 15px; border-radius: 4px; }
+                                    .shadow-button { background: #ff5722; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; margin: 5px; }
+                                    .shadow-input { padding: 6px; border: 1px solid #ddd; border-radius: 4px; margin: 5px; }
+                                </style>
+                                <div class='shadow-content'>
+                                    <h5>Shadow DOM in iframe</h5>
+                                    <button id='iframe-shadow-btn' class='shadow-button'>iframe Shadow Button</button>
+                                    <input type='text' id='iframe-shadow-input' class='shadow-input' placeholder='iframe Shadow Input'>
+                                    <div id='iframe-shadow-div' style='background: #9c27b0; color: white; padding: 10px; margin: 5px; border-radius: 4px;'>iframe Shadow Div</div>
+                                </div>
+                            \`;
+                        }
+                    }
+                    customElements.define('iframe-widget', IframeWidget);
+                </script>
+            </body>
+            </html>
+        "></iframe>
+    </div>
+
+    <script>
+        // Custom Web Component with Shadow DOM
+        class CustomWidget extends HTMLElement {
+            constructor() {
+                super();
+                const shadow = this.attachShadow({mode: 'open'});
+                shadow.innerHTML = `
+                    <style>
+                        .widget-container {
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            color: white;
+                            padding: 20px;
+                            border-radius: 8px;
+                            margin: 10px 0;
+                        }
+                        .shadow-button {
+                            background: #28a745;
+                            color: white;
+                            border: none;
+                            padding: 10px 15px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            margin: 5px;
+                        }
+                        .shadow-input {
+                            padding: 8px;
+                            border: 1px solid #ddd;
+                            border-radius: 4px;
+                            margin: 5px;
+                            width: 200px;
+                        }
+                        .shadow-text {
+                            background: rgba(255,255,255,0.2);
+                            padding: 10px;
+                            margin: 5px;
+                            border-radius: 4px;
+                        }
+                    </style>
+                    <div class="widget-container">
+                        <h4>Custom Widget (Shadow DOM)</h4>
+                        <button id="shadow-btn" class="shadow-button" data-testid="shadow-button">Shadow Button</button>
+                        <input type="text" id="shadow-input" class="shadow-input" placeholder="Shadow input field" data-testid="shadow-input">
+                        <div id="shadow-text" class="shadow-text" data-testid="shadow-text">Shadow DOM Text Element</div>
+                    </div>
+                `;
+            }
+        }
+        
+        class CustomForm extends HTMLElement {
+            constructor() {
+                super();
+                const shadow = this.attachShadow({mode: 'open'});
+                shadow.innerHTML = `
+                    <style>
+                        .form-container {
+                            background: #fff;
+                            border: 2px solid #007bff;
+                            padding: 20px;
+                            border-radius: 8px;
+                            margin: 10px 0;
+                        }
+                        .form-field {
+                            margin: 10px 0;
+                        }
+                        .form-label {
+                            display: block;
+                            font-weight: bold;
+                            margin-bottom: 5px;
+                            color: #333;
+                        }
+                        .form-input {
+                            width: 100%;
+                            padding: 8px;
+                            border: 1px solid #ddd;
+                            border-radius: 4px;
+                            box-sizing: border-box;
+                        }
+                        .form-button {
+                            background: #007bff;
+                            color: white;
+                            border: none;
+                            padding: 10px 20px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                        }
+                    </style>
+                    <div class="form-container">
+                        <h4>Custom Form (Shadow DOM)</h4>
+                        <div class="form-field">
+                            <label class="form-label" for="shadow-email">Email:</label>
+                            <input type="email" id="shadow-email" class="form-input" placeholder="Enter your email" data-testid="shadow-email">
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label" for="shadow-password">Password:</label>
+                            <input type="password" id="shadow-password" class="form-input" placeholder="Enter your password" data-testid="shadow-password">
+                        </div>
+                        <button id="shadow-submit" class="form-button" data-testid="shadow-submit">Submit Form</button>
+                    </div>
+                `;
+            }
+        }
+        
+        // Define custom elements
+        customElements.define('custom-widget', CustomWidget);
+        customElements.define('custom-form', CustomForm);
+        
+        // Add some interaction logging
+        document.addEventListener('click', (e) => {
+            console.log('Clicked element:', e.target);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nested iframe Content</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 10px;
+            background: #fff3e0;
+            margin: 0;
+        }
+        .nested-element {
+            background: #ff9800;
+            color: white;
+            padding: 8px;
+            margin: 3px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .nested-input {
+            padding: 6px;
+            margin: 3px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 150px;
+        }
+    </style>
+</head>
+<body>
+    <h5>Nested iframe Content</h5>
+    <p>This is nested iframe content loaded via src.</p>
+    
+    <button id="nested-btn" class="nested-element" data-testid="nested-button">Nested iframe Button</button>
+    <input type="text" id="nested-input" class="nested-input" placeholder="Nested input" data-testid="nested-input">
+    <div id="nested-div" class="nested-element" data-testid="nested-div">Nested iframe Div</div>
+
+    <script>
+        // Add some interaction logging for nested iframe content
+        document.addEventListener('click', (e) => {
+            console.log('Clicked element in nested iframe:', e.target);
+        });
+        
+        console.log('Nested iframe content document loaded and ready');
+    </script>
+</body>
+</html>
