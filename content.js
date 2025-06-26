@@ -121,12 +121,14 @@ iframe content may not be accessible due to browser security restrictions with f
 🎯 QA Locator Inspector Enabled
 Quick Copy Options:
 - Hover over elements to see locators
-- Ctrl+Click: Copy CSS selector
+- Ctrl+Click: Copy CSS selector (PRIORITY)
 - Alt+Click: Copy XPath
 - Shift+Click: Log both to console
-- Right-Click: Copy XPath (alternative)
+- Right-Click: Copy XPath (default)
+- Ctrl+Right-Click: Copy CSS (Ctrl priority)
 
 Normal clicks work as usual - no interference!
+Debug: Watch console for modifier key detection logs.
             `);
         }
         chrome.storage.local.set({enabled: this.isEnabled});
@@ -170,18 +172,22 @@ Normal clicks work as usual - no interference!
             const locators = this.generateLocators(e.target);
             const elementType = this.getElementType(e.target);
             
+            // Priority order: Ctrl (CSS) > Alt (XPath) > Shift (both)
             if (e.ctrlKey) {
-                // Ctrl+Click copies CSS selector
+                // Ctrl+Click ALWAYS copies CSS selector (highest priority)
+                console.log('🎯 Ctrl+Click detected - copying CSS selector');
                 this.copyToClipboard(locators.css);
                 this.addToHistory(locators);
                 this.showCopyNotification('CSS');
             } else if (e.altKey) {
-                // Alt+Click copies XPath
+                // Alt+Click copies XPath (second priority)
+                console.log('🎯 Alt+Click detected - copying XPath');
                 this.copyToClipboard(locators.xpath);
                 this.addToHistory(locators);
                 this.showCopyNotification('XPath');
             } else if (e.shiftKey) {
-                // Shift+Click shows both options in console
+                // Shift+Click shows both options in console (third priority)
+                console.log('🎯 Shift+Click detected - showing both locators');
                 this.showLocatorOptions(locators);
             }
         }
@@ -210,11 +216,48 @@ Quick Copy:
         e.preventDefault();
         e.stopPropagation();
         
-        // Right-click copies XPath for any element
+        // Reset contexts for regular DOM elements
+        this.resetContexts();
+        
         const locators = this.generateLocators(e.target);
-        this.copyToClipboard(locators.xpath);
-        this.addToHistory(locators);
-        this.showCopyNotification('XPath');
+        
+        // Check for modifier keys - Ctrl/Alt take precedence over right-click
+        if (e.ctrlKey) {
+            // Ctrl+Right-click copies CSS (Ctrl precedence)
+            console.log('🎯 Ctrl+Right-click detected - copying CSS selector');
+            this.copyToClipboard(locators.css);
+            this.addToHistory(locators);
+            this.showCopyNotification('CSS');
+        } else if (e.altKey) {
+            // Alt+Right-click copies XPath (Alt precedence)
+            console.log('🎯 Alt+Right-click detected - copying XPath');
+            this.copyToClipboard(locators.xpath);
+            this.addToHistory(locators);
+            this.showCopyNotification('XPath');
+        } else {
+            // Pure right-click copies XPath (default)
+            console.log('🎯 Right-click detected - copying XPath');
+            this.copyToClipboard(locators.xpath);
+            this.addToHistory(locators);
+            this.showCopyNotification('XPath');
+        }
+        // Normal clicks proceed without interference
+    }
+
+    showLocatorOptions(locators) {
+        console.log(`
+🎯 Element Locators:
+CSS: ${locators.css}
+XPath: ${locators.xpath}
+
+Quick Copy:
+- Ctrl+Click: Copy CSS
+- Alt+Click: Copy XPath
+- Right-Click: Copy XPath
+        `);
+        
+        // Show notification about console output
+        this.showCopyNotification('Locators logged to console');
     }
 
     handleKeyDown(e) {
@@ -240,7 +283,7 @@ Quick Copy:
             // Add XPath mode indicator to tooltip
             const modeIndicator = this.tooltip.querySelector('.mode-indicator');
             if (modeIndicator) {
-                modeIndicator.textContent = '🎯 XPath Mode (Ctrl/Alt+Click)';
+                modeIndicator.textContent = '🎯 XPath Mode (Alt+Click)';
                 modeIndicator.style.color = '#9f7aea';
             }
         }
@@ -251,7 +294,7 @@ Quick Copy:
             // Reset to CSS mode indicator
             const modeIndicator = this.tooltip.querySelector('.mode-indicator');
             if (modeIndicator) {
-                modeIndicator.textContent = '🎯 CSS Mode (Click)';
+                modeIndicator.textContent = '🎯 CSS Mode (Ctrl + Click)';
                 modeIndicator.style.color = '#68d391';
             }
         }
@@ -358,7 +401,7 @@ Quick Copy:
                 ⌨️ Modifier Keys for Copy
             </div>
             <div style="margin-top: 4px; font-size: 10px; color: #a0aec0;">
-                Ctrl+Click: CSS • Alt+Click: XPath • Shift+Click: Both • Right-click: XPath • Matches: ${matchCount} elements
+                Ctrl+Click: CSS • Alt+Click: XPath • Shift+Click: Both • Right-click: XPath • Ctrl priority: CSS everywhere • Matches: ${matchCount} elements
             </div>
         `;
         

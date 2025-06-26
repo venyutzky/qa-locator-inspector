@@ -1,6 +1,6 @@
 ---
-previous_migration: 20250626164000_audit_and_fix_css_iframe_selector_generation.md
-current_migration: 20250626165000_fix_click_action_interference_with_normal_interactions.md
+previous_migration: 20250626165000_fix_click_action_interference_with_normal_interactions.md
+current_migration: 20250626165000_fix_ctrl_click_xpath_priority_issue.md
 ---
 
 ## project-chrome-extension
@@ -54,7 +54,8 @@ qa-locator-inspector/
         ├── 20250626162000_fix_iframe_local_file_access_and_security_context.md (applied)
         ├── 20250626163000_fix_iframe_xpath_generation_logic.md (applied)
         ├── 20250626164000_audit_and_fix_css_iframe_selector_generation.md (applied)
-        └── 20250626165000_fix_click_action_interference_with_normal_interactions.md (applied)
+        ├── 20250626165000_fix_click_action_interference_with_normal_interactions.md (applied)
+        └── 20250626165000_fix_ctrl_click_xpath_priority_issue.md (applied)
 ```
 
 ### Dependencies
