@@ -1,6 +1,6 @@
 ---
 previous_migration: 20250626165000_fix_click_action_interference_with_normal_interactions.md
-current_migration: 20250626165000_fix_ctrl_click_xpath_priority_issue.md
+current_migration: 20250626170000_fix_css_hierarchical_selector_and_ctrl_click_priority.md
 ---
 
 ## project-chrome-extension
@@ -51,11 +51,10 @@ qa-locator-inspector/
         ├── 20250626153000_fix_nested_iframe_recursive_injection.md (applied)
         ├── 20250626153500_fix_iframe_document_structure_handling.md (applied)
         ├── 20250626160000_fix_iframe_standard_html_document_handling.md (applied)
-        ├── 20250626162000_fix_iframe_local_file_access_and_security_context.md (applied)
         ├── 20250626163000_fix_iframe_xpath_generation_logic.md (applied)
         ├── 20250626164000_audit_and_fix_css_iframe_selector_generation.md (applied)
         ├── 20250626165000_fix_click_action_interference_with_normal_interactions.md (applied)
-        └── 20250626165000_fix_ctrl_click_xpath_priority_issue.md (applied)
+        └── 20250626170000_fix_css_hierarchical_selector_and_ctrl_click_priority.md (applied)
 ```
 
 ### Dependencies
@@ -82,10 +81,11 @@ qa-locator-inspector/
   - **Cross-frame Locators**: Generates frame-switching code for Playwright/Selenium
   - **Shadow Piercing**: Creates shadow DOM-aware selectors for web components
 - **Hierarchical CSS Selectors**: 
-  - Smart parent-child relationships when direct attributes are not unique
-  - Example: `.navigation > .menu > a[href="/profile"]` for better specificity
-  - Semantic parent prioritization (forms, navigation, modals over generic divs)
-  - Maximum 3-level depth to prevent fragility
+  - **Smart combinator selection**: Prefers descendant (` `) over direct child (`>`) for robustness
+  - **Example**: `.elementor-widget-container button[name="alertbox"]` instead of `.elementor-widget-container > button[name="alertbox"]`
+  - **Fallback strategy**: Uses direct child only when descendant selector isn't unique
+  - **Semantic parent prioritization**: Forms, navigation, modals over generic divs
+  - **Maximum 3-level depth**: Prevents fragility while maintaining specificity
 - **Element-Specific Locator Generation**: 
   - Input fields: Placeholder → ID → Name → Unique Class → Hierarchical → Attributes
   - Buttons: ID → Name → Unique Class → Hierarchical → Attributes
@@ -111,6 +111,7 @@ qa-locator-inspector/
 - **Advanced Copy Options**:
   - **Multiple Methods**: Click, Ctrl+Click, Alt+Click, Right-click
   - **Non-Interfering**: Normal clicks work without interference - only modifier keys trigger copying
+  - **Priority Handling**: Ctrl+Click always copies CSS, Alt+Click always copies XPath, Ctrl+Alt gives CSS priority
   - **History Interface**: Click CSS or XPath in history to copy
   - **Smart Tooltips**: Shows available copy methods for each element
 - **Quality Assessment**: 
