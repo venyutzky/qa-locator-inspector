@@ -1,6 +1,6 @@
 ---
-previous_migration: 20250626163000_fix_iframe_xpath_generation_logic.md
-current_migration: 20250626164000_audit_and_fix_css_iframe_selector_generation.md
+previous_migration: 20250626164000_audit_and_fix_css_iframe_selector_generation.md
+current_migration: 20250626165000_fix_click_action_interference_with_normal_interactions.md
 ---
 
 ## project-chrome-extension
@@ -53,7 +53,8 @@ qa-locator-inspector/
         ├── 20250626160000_fix_iframe_standard_html_document_handling.md (applied)
         ├── 20250626162000_fix_iframe_local_file_access_and_security_context.md (applied)
         ├── 20250626163000_fix_iframe_xpath_generation_logic.md (applied)
-        └── 20250626164000_audit_and_fix_css_iframe_selector_generation.md (applied)
+        ├── 20250626164000_audit_and_fix_css_iframe_selector_generation.md (applied)
+        └── 20250626165000_fix_click_action_interference_with_normal_interactions.md (applied)
 ```
 
 ### Dependencies
@@ -108,6 +109,7 @@ qa-locator-inspector/
   - **Dual History Display**: Both CSS and XPath shown in popup history
 - **Advanced Copy Options**:
   - **Multiple Methods**: Click, Ctrl+Click, Alt+Click, Right-click
+  - **Non-Interfering**: Normal clicks work without interference - only modifier keys trigger copying
   - **History Interface**: Click CSS or XPath in history to copy
   - **Smart Tooltips**: Shows available copy methods for each element
 - **Quality Assessment**: 
