@@ -1,6 +1,6 @@
 ---
-previous_migration: 20250626165000_fix_click_action_interference_with_normal_interactions.md
-current_migration: 20250626170000_fix_css_hierarchical_selector_and_ctrl_click_priority.md
+previous_migration: 20250626170000_fix_css_hierarchical_selector_and_ctrl_click_priority.md
+current_migration: 20250626171000_fix_css_hierarchical_descendant_combinator_strategy.md
 ---
 
 ## project-chrome-extension
@@ -51,10 +51,10 @@ qa-locator-inspector/
         ├── 20250626153000_fix_nested_iframe_recursive_injection.md (applied)
         ├── 20250626153500_fix_iframe_document_structure_handling.md (applied)
         ├── 20250626160000_fix_iframe_standard_html_document_handling.md (applied)
-        ├── 20250626163000_fix_iframe_xpath_generation_logic.md (applied)
         ├── 20250626164000_audit_and_fix_css_iframe_selector_generation.md (applied)
         ├── 20250626165000_fix_click_action_interference_with_normal_interactions.md (applied)
-        └── 20250626170000_fix_css_hierarchical_selector_and_ctrl_click_priority.md (applied)
+        ├── 20250626170000_fix_css_hierarchical_selector_and_ctrl_click_priority.md (applied)
+        └── 20250626171000_fix_css_hierarchical_descendant_combinator_strategy.md (applied)
 ```
 
 ### Dependencies
@@ -84,7 +84,7 @@ qa-locator-inspector/
   - **Smart combinator selection**: Prefers descendant (` `) over direct child (`>`) for robustness
   - **Example**: `.elementor-widget-container button[name="alertbox"]` instead of `.elementor-widget-container > button[name="alertbox"]`
   - **Fallback strategy**: Uses direct child only when descendant selector isn't unique
-  - **Semantic parent prioritization**: Forms, navigation, modals over generic divs
+  - **Framework compatibility**: Works with React, Vue, Angular wrapper elements and page builders
   - **Maximum 3-level depth**: Prevents fragility while maintaining specificity
 - **Element-Specific Locator Generation**: 
   - Input fields: Placeholder → ID → Name → Unique Class → Hierarchical → Attributes

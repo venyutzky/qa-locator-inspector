@@ -380,12 +380,12 @@ Quick Copy:
                 <span style="font-size: 10px; margin-left: 8px; color: ${cssUnique ? '#68d391' : '#f56565'};">
                     ${cssUnique ? '✓ UNIQUE' : '⚠ NOT UNIQUE'}
                 </span>
-                ${locators.css.includes(' > ') ? `<span style="font-size: 10px; margin-left: 8px; color: #ffd93d;">🏗️ HIERARCHICAL</span>` : ''}
+                ${(locators.css.includes(' > ') || (locators.css.includes(' ') && !locators.css.startsWith('.') && locators.css.split(' ').length > 1)) ? `<span style="font-size: 10px; margin-left: 8px; color: #ffd93d;">🏗️ HIERARCHICAL</span>` : ''}
                 <div style="background: #1a202c; padding: 4px 6px; border-radius: 4px; margin-top: 2px; word-break: break-all;">
                     ${this.escapeHtml(locators.css)}
                 </div>
                 <div style="font-size: 10px; color: #a0aec0; margin-top: 2px;">
-                    Quality: ${cssQuality}${locators.css.includes(' > ') ? ` • Depth: ${locators.css.split(' > ').length} levels` : ''}
+                    Quality: ${cssQuality}${(locators.css.includes(' > ') || (locators.css.includes(' ') && !locators.css.startsWith('.') && locators.css.split(' ').length > 1)) ? ` • Depth: ${Math.max(locators.css.split(' > ').length, locators.css.split(' ').length)} levels` : ''}
                 </div>
             </div>
             <div style="margin-bottom: 6px;">
@@ -414,8 +414,9 @@ Quick Copy:
         if (selector.includes('[placeholder=')) return 'Excellent (Placeholder)';
         if (selector.includes('[name=')) return 'Good (Name)';
         if (selector.includes('[data-testid=')) return 'Excellent (Test ID)';
-        if (selector.startsWith('.') && !selector.includes(' >')) return 'Good (Unique Class)';
-        if (selector.includes(' > ')) return 'Good (Hierarchical)';
+        if (selector.startsWith('.') && !selector.includes(' ') && !selector.includes(' >')) return 'Good (Unique Class)';
+        if (selector.includes(' > ')) return 'Good (Direct Child)';
+        if (selector.includes(' ') && !selector.includes(' >')) return 'Good (Descendant)';
         if (selector.includes('[type=')) return 'Fair (Type Attribute)';
         if (selector.includes(':nth-child')) return 'Poor (Position-based)';
         return 'Fair (Attribute-based)';
@@ -822,11 +823,18 @@ Quick Copy:
             if (parentSelector) {
                 hierarchy.unshift(parentSelector);
                 
-                // Test if this hierarchy level is unique
-                const hierarchicalSelector = hierarchy.join(' > ');
-                if (this.isUniqueSelector(hierarchicalSelector)) {
-                    console.log(`Hierarchical selector found unique at depth ${depth + 1}: ${hierarchicalSelector}`);
-                    return hierarchicalSelector;
+                // TRY DESCENDANT SELECTOR FIRST (more robust)
+                const descendantSelector = hierarchy.join(' ');
+                if (this.isUniqueSelector(descendantSelector)) {
+                    console.log(`Descendant selector found unique at depth ${depth + 1}: ${descendantSelector}`);
+                    return descendantSelector;
+                }
+                
+                // FALLBACK TO DIRECT CHILD IF NEEDED
+                const directChildSelector = hierarchy.join(' > ');
+                if (this.isUniqueSelector(directChildSelector)) {
+                    console.log(`Direct child selector needed at depth ${depth + 1}: ${directChildSelector}`);
+                    return directChildSelector;
                 }
             }
             
@@ -834,10 +842,12 @@ Quick Copy:
             depth++;
         }
         
-        // Final validation: if still not unique, try different parent strategies
-        const finalSelector = hierarchy.join(' > ');
-        if (!this.isUniqueSelector(finalSelector)) {
-            console.warn(`Hierarchical selector still not unique: ${finalSelector} (matches ${document.querySelectorAll(finalSelector).length} elements)`);
+        // Final validation: prefer descendant selector for robustness
+        const descendantFallback = hierarchy.join(' ');
+        const directChildFallback = hierarchy.join(' > ');
+        
+        if (!this.isUniqueSelector(descendantFallback) && !this.isUniqueSelector(directChildFallback)) {
+            console.warn(`No unique hierarchical selector found. Using descendant: ${descendantFallback} (matches ${document.querySelectorAll(descendantFallback).length} elements)`);
             
             // Try alternative strategy with more specific parent selectors
             const alternativeSelector = this.generateAlternativeHierarchicalSelector(element, baseSelector);
@@ -846,7 +856,8 @@ Quick Copy:
             }
         }
         
-        return finalSelector;
+        // Return most robust selector (descendant by default)
+        return descendantFallback;
     }
 
     generateAlternativeHierarchicalSelector(element, baseSelector) {
@@ -875,10 +886,17 @@ Quick Copy:
             if (parentSelector) {
                 hierarchy.unshift(parentSelector);
                 
-                const hierarchicalSelector = hierarchy.join(' > ');
-                if (this.isUniqueSelector(hierarchicalSelector)) {
-                    console.log(`Alternative hierarchical selector found: ${hierarchicalSelector}`);
-                    return hierarchicalSelector;
+                // TRY DESCENDANT FIRST, THEN DIRECT CHILD
+                const descendantSelector = hierarchy.join(' ');
+                if (this.isUniqueSelector(descendantSelector)) {
+                    console.log(`Alternative descendant selector found: ${descendantSelector}`);
+                    return descendantSelector;
+                }
+                
+                const directChildSelector = hierarchy.join(' > ');
+                if (this.isUniqueSelector(directChildSelector)) {
+                    console.log(`Alternative direct child selector found: ${directChildSelector}`);
+                    return directChildSelector;
                 }
             }
             
