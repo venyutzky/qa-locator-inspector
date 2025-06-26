@@ -115,6 +115,19 @@ iframe content may not be accessible due to browser security restrictions with f
         if (!this.isEnabled) {
             this.hideTooltip();
             this.removeHighlight();
+        } else {
+            // Show helpful guidance when extension is enabled
+            console.log(`
+🎯 QA Locator Inspector Enabled
+Quick Copy Options:
+- Hover over elements to see locators
+- Ctrl+Click: Copy CSS selector
+- Alt+Click: Copy XPath
+- Shift+Click: Log both to console
+- Right-Click: Copy XPath (alternative)
+
+Normal clicks work as usual - no interference!
+            `);
         }
         chrome.storage.local.set({enabled: this.isEnabled});
     }
@@ -146,27 +159,49 @@ iframe content may not be accessible due to browser security restrictions with f
     handleClick(e) {
         if (!this.isEnabled) return;
         
-        e.preventDefault();
-        e.stopPropagation();
-        
-        // Reset contexts for regular DOM elements
-        this.resetContexts();
-        
-        const locators = this.generateLocators(e.target);
-        const elementType = this.getElementType(e.target);
-        
-        // Enhanced XPath copy functionality for all elements
-        if (e.ctrlKey || e.altKey) {
-            // Ctrl+Click or Alt+Click copies XPath for any element
-            this.copyToClipboard(locators.xpath);
-            this.addToHistory(locators);
-            this.showCopyNotification('XPath');
-        } else {
-            // Regular click copies CSS selector
-            this.copyToClipboard(locators.css);
-            this.addToHistory(locators);
-            this.showCopyNotification('CSS');
+        // Only intercept clicks with modifier keys - allow normal clicks to proceed
+        if (e.ctrlKey || e.altKey || e.shiftKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Reset contexts for regular DOM elements
+            this.resetContexts();
+            
+            const locators = this.generateLocators(e.target);
+            const elementType = this.getElementType(e.target);
+            
+            if (e.ctrlKey) {
+                // Ctrl+Click copies CSS selector
+                this.copyToClipboard(locators.css);
+                this.addToHistory(locators);
+                this.showCopyNotification('CSS');
+            } else if (e.altKey) {
+                // Alt+Click copies XPath
+                this.copyToClipboard(locators.xpath);
+                this.addToHistory(locators);
+                this.showCopyNotification('XPath');
+            } else if (e.shiftKey) {
+                // Shift+Click shows both options in console
+                this.showLocatorOptions(locators);
+            }
         }
+        // Normal clicks proceed without interference
+    }
+
+    showLocatorOptions(locators) {
+        console.log(`
+🎯 Element Locators:
+CSS: ${locators.css}
+XPath: ${locators.xpath}
+
+Quick Copy:
+- Ctrl+Click: Copy CSS
+- Alt+Click: Copy XPath
+- Right-Click: Copy XPath
+        `);
+        
+        // Show notification about console output
+        this.showCopyNotification('Locators logged to console');
     }
 
     handleRightClick(e) {
@@ -320,10 +355,10 @@ iframe content may not be accessible due to browser security restrictions with f
                 </div>
             </div>
             <div class="mode-indicator" style="margin-top: 8px; font-size: 11px; font-weight: bold; color: #68d391;">
-                🎯 CSS Mode (Click)
+                ⌨️ Modifier Keys for Copy
             </div>
             <div style="margin-top: 4px; font-size: 10px; color: #a0aec0;">
-                Click: CSS • Ctrl/Alt+Click: XPath • Right-click: XPath • Matches: ${matchCount} elements
+                Ctrl+Click: CSS • Alt+Click: XPath • Shift+Click: Both • Right-click: XPath • Matches: ${matchCount} elements
             </div>
         `;
         
@@ -1850,23 +1885,45 @@ iframe content may not be accessible due to browser security restrictions with f
     handleIframeClick(e, frameInfo) {
         console.log(`Iframe click: ${frameInfo.name}, element:`, e.target.tagName, e.target.id || e.target.className);
         
-        e.preventDefault();
-        e.stopPropagation();
-        
-        this.frameContext = frameInfo;
-        const locators = this.generateIframeLocators(e.target, frameInfo);
-        
-        console.log(`Generated iframe locators:`, locators);
-        
-        if (e.ctrlKey || e.altKey) {
-            this.copyToClipboard(locators.xpath);
-            this.addToHistory(locators);
-            this.showIframeXPathNotification(frameInfo);
-        } else {
-            this.copyToClipboard(locators.css);
-            this.addToHistory(locators);
-            this.showIframeCSSNotification(frameInfo);
+        // Only intercept clicks with modifier keys - allow normal iframe interactions
+        if (e.ctrlKey || e.altKey || e.shiftKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            this.frameContext = frameInfo;
+            const locators = this.generateIframeLocators(e.target, frameInfo);
+            
+            console.log(`Generated iframe locators:`, locators);
+            
+            if (e.ctrlKey) {
+                this.copyToClipboard(locators.css);
+                this.addToHistory(locators);
+                this.showIframeCSSNotification(frameInfo);
+            } else if (e.altKey) {
+                this.copyToClipboard(locators.xpath);
+                this.addToHistory(locators);
+                this.showIframeXPathNotification(frameInfo);
+            } else if (e.shiftKey) {
+                this.showIframeLocatorOptions(locators, frameInfo);
+            }
         }
+        // Normal clicks in iframe proceed without interference
+    }
+
+    showIframeLocatorOptions(locators, frameInfo) {
+        console.log(`
+🖼️ iframe Element Locators (${frameInfo.name}):
+CSS: ${locators.css}
+XPath: ${locators.xpath}
+iframe Selector: ${locators.iframeSelector || 'N/A'}
+
+Quick Copy:
+- Ctrl+Click: Copy CSS
+- Alt+Click: Copy XPath
+- Right-Click: Copy XPath
+        `);
+        
+        this.showCopyNotification('iframe locators logged to console');
     }
 
     showIframeCSSNotification(frameInfo) {
@@ -2079,25 +2136,47 @@ Playwright:
     }
 
     handleShadowClick(e, shadowHost) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        this.shadowContext = {
-            host: shadowHost,
-            hostSelector: this.generateCSSSelector(shadowHost)
-        };
-        
-        const locators = this.generateShadowDOMLocators(e.target, this.shadowContext);
-        
-        if (e.ctrlKey || e.altKey) {
-            this.copyToClipboard(locators.xpath);
-            this.addToHistory(locators);
-            this.showCopyNotification('XPath');
-        } else {
-            this.copyToClipboard(locators.css);
-            this.addToHistory(locators);
-            this.showCopyNotification('CSS');
+        // Only intercept clicks with modifier keys - allow normal shadow DOM interactions
+        if (e.ctrlKey || e.altKey || e.shiftKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            this.shadowContext = {
+                host: shadowHost,
+                hostSelector: this.generateCSSSelector(shadowHost)
+            };
+            
+            const locators = this.generateShadowDOMLocators(e.target, this.shadowContext);
+            
+            if (e.ctrlKey) {
+                this.copyToClipboard(locators.css);
+                this.addToHistory(locators);
+                this.showCopyNotification('CSS (Shadow DOM)');
+            } else if (e.altKey) {
+                this.copyToClipboard(locators.xpath);
+                this.addToHistory(locators);
+                this.showCopyNotification('XPath (Shadow DOM)');
+            } else if (e.shiftKey) {
+                this.showShadowLocatorOptions(locators, this.shadowContext);
+            }
         }
+        // Normal clicks in shadow DOM proceed without interference
+    }
+
+    showShadowLocatorOptions(locators, shadowContext) {
+        console.log(`
+🌑 Shadow DOM Element Locators:
+CSS: ${locators.css}
+XPath: ${locators.xpath}
+Host: ${shadowContext.hostSelector}
+
+Quick Copy:
+- Ctrl+Click: Copy CSS
+- Alt+Click: Copy XPath
+- Right-Click: Copy XPath
+        `);
+        
+        this.showCopyNotification('Shadow DOM locators logged to console');
     }
 
     generateShadowDOMLocators(element, shadowContext) {

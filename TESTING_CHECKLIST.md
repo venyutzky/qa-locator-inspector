@@ -35,9 +35,11 @@
    - [ ] Tooltip shows correct element info ✅
 
 3. **Click to Copy**
-   - [ ] Click on any element while inspector is active
+   - [ ] **Ctrl+Click** on any element while inspector is active
    - [ ] Green notification appears: "CSS Selector copied to clipboard!"
    - [ ] Paste clipboard content - should contain valid CSS selector ✅
+   - [ ] **Alt+Click** copies XPath with purple notification ✅
+   - [ ] **Normal clicks work normally** - no interference with page functionality ✅
 
 ### Locator Quality Testing
 Test on different element types:
